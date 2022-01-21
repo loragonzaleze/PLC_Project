@@ -81,8 +81,8 @@ public class LexerTests {
 	@Test
 	void testSingleChar0() throws LexicalException {
 		String input = """
-				+
-				-
+				+       
+				-           
 				""";
 		show(input);
 		ILexer lexer = getLexer(input);
@@ -185,5 +185,7 @@ public class LexerTests {
 			lexer.next();			
 		});
 	}
+
+	//Custom tests
 
 }

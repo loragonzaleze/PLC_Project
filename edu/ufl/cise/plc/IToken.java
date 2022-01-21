@@ -6,6 +6,7 @@ public interface IToken {
 	
     public record SourceLocation(int line, int column) { }
 
+
 	public static enum Kind {
 		IDENT, 
 		INT_LIT, 

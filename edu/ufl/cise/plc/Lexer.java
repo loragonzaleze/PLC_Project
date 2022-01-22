@@ -18,8 +18,11 @@ public class Lexer implements ILexer{
         HAVE_DOT,
         IN_FLOAT,
         IN_NUM,
-        HAVE_EQ,
-        HAVE_MINUS
+        HAVE_EQ, // '=' -> '==' | '='
+        HAVE_MINUS, // '-' -> '->' | '-'
+        HAVE_LT, // '<' -> '<<' | '<=' | '<' | '<-'
+        HAVE_GT, // '>' -> '>>' | '>=' | '>'
+        HAVE_BANG // '!' -> '!=' | '!'
     }
 
     public Lexer(String code){
@@ -38,13 +41,16 @@ public class Lexer implements ILexer{
         int idx = 0;
         while(idx < codeLength) {
             char currentChar = code.charAt(idx);
-
             switch(currState){
                 case START -> {
-                    ArrayList<Integer> positions = startState(idx, row, column);
+                    currentToken.append(currentChar);
+                    ArrayList<Integer> positions = startState(idx, row, column, currentToken);
                     row = positions.get(0);
                     column = positions.get(1);
                     idx = positions.get(2);
+                    if(currState == State.START){
+                        currentToken.setLength(0); //Resets string to start creating new token
+                    }
                 }
                 case IN_IDENT -> {
                     System.out.println("IN_IDENT");
@@ -56,134 +62,148 @@ public class Lexer implements ILexer{
                     System.out.println("HAVE_DOT");
                 }
                 case HAVE_EQ -> {
-                    System.out.println("HAVE_EQUAL");
+                    ArrayList<Integer> positions = haveEqualState(idx, row, column, currentToken);
+                    row = positions.get(0);
+                    column = positions.get(1);
+                    idx = positions.get(2);
                 }
                 default -> System.out.println("looool");
 
             }
 
         }
+        //Sentinel value representing end of file
         tokens.add(new Token(IToken.Kind.EOF, "sentinel", 0, 0, 0, 0));
+
     }
 
-    private ArrayList<Integer> startState(int index, int row, int column){
+    private ArrayList<Integer> inIdentState(int index, int row, int column, StringBuilder currToken){
         char currentChar = code.charAt(index);
-        int start = index;
 
+        return new ArrayList<>(Arrays.asList(row, column, index));
+    }
+
+    //HAVE_EQ, // '=' -> '==' | '='
+    private ArrayList<Integer> haveEqualState(int index, int row, int column, StringBuilder currToken){
+        char currentChar = code.charAt(index);
         switch(currentChar){
-            case '+' -> {
-                tokens.add(new Token(IToken.Kind.PLUS, "+", index, 1, row, column));
-                currState = State.START;
-                index++;
-                column++;
-            }
-            case '-' -> {
-                tokens.add(new Token(IToken.Kind.MINUS, "-", index, 1, row, column));
-                currState = State.START;
-                index++;
+            case '=' -> {
+                currToken.append(currentChar);
+                tokens.add(new Token(IToken.Kind.EQUALS, currToken.toString(), index, 2, row, column - 1));
                 column++;
             }
             case '\n' -> {
-                index++;
+                tokens.add(new Token(IToken.Kind.ASSIGN, currToken.toString(), index, 1, row, column - 1));
                 row++;
                 column = 0;
+            }
+            case '\t' -> {
+                tokens.add(new Token(IToken.Kind.ASSIGN, currToken.toString(), index, 1, row, column - 1));
+                column += 3;
+            }
+            default -> {
+                tokens.add(new Token(IToken.Kind.ASSIGN, currToken.toString(), index, 1, row, column - 1));
+                column++;
+            }
+        }
+        index++;
+        currToken.setLength(0);
+        currState = State.START;
+
+        return new ArrayList<Integer>(Arrays.asList(row, column, index));
+    }
+
+
+    private ArrayList<Integer> startState(int index, int row, int column, StringBuilder currToken){
+        char currentChar = code.charAt(index);
+        int start = index;
+        if(currentChar == '\t'){
+            index++;
+            column += 3;
+            currState = State.START;
+            return new ArrayList<>(Arrays.asList(row, column, index));
+        }
+        if(currentChar == '\n'){
+            index++;
+            row++;
+            column = 0;
+            currState = State.START;
+            return new ArrayList<>(Arrays.asList(row, column, index));
+        }
+
+        switch(currentChar){
+            case '+' -> {
+                tokens.add(new Token(IToken.Kind.PLUS, currToken.toString(), index, 1, row, column));
                 currState = State.START;
             }
             case ' ' -> {
-                index++;
-                column++;
                 currState = State.START;
             }
             case '&' -> {
-                tokens.add(new Token(IToken.Kind.AND, "&", index, 1, row, column));
-                index++;
-                column++;
+                tokens.add(new Token(IToken.Kind.AND, currToken.toString(), index, 1, row, column));
                 currState = State.START;
             }
-            case '=' -> {
-                tokens.add(new Token(IToken.Kind.ASSIGN, "=", index, 1, row, column));
-                index++;
-                column++;
-                currState = State.START;
-            }
-            case '!' -> {
-                tokens.add(new Token(IToken.Kind.BANG, "!", index, 1, row, column));
-                index++;
-                column++;
-                currState = State.START;
-            }
+
             case ',' -> {
-                tokens.add(new Token(IToken.Kind.COMMA, ",", index, 1, row, column));
-                index++;
-                column++;
+                tokens.add(new Token(IToken.Kind.COMMA, currToken.toString(), index, 1, row, column));
                 currState = State.START;
             }
             case '/' -> {
-                tokens.add(new Token(IToken.Kind.DIV, "/", index, 1, row, column));
-                index++;
-                column++;
-                currState = State.START;
-            }
-            case '>', '<' -> {
-
-                if(currentChar == '>')
-                    tokens.add(new Token(IToken.Kind.GT, ">", index, 1, row, column));
-                else
-                    tokens.add(new Token(IToken.Kind.LT, "<", index, 1, row, column));
-                index++;
-                column++;
+                tokens.add(new Token(IToken.Kind.DIV, currToken.toString(), index, 1, row, column));
                 currState = State.START;
             }
             case '(', ')' -> {
                 if(currentChar == '(')
-                    tokens.add(new Token(IToken.Kind.LPAREN, "(", index, 1, row, column));
+                    tokens.add(new Token(IToken.Kind.LPAREN, currToken.toString(), index, 1, row, column));
                 else
-                    tokens.add(new Token(IToken.Kind.RPAREN, ")", index, 1, row, column));
-                index++;
-                column++;
+                    tokens.add(new Token(IToken.Kind.RPAREN, currToken.toString(), index, 1, row, column));
                 currState = State.START;
             }
             case '[', ']' -> {
                 if(currentChar == '[')
-                    tokens.add(new Token(IToken.Kind.LSQUARE, "[", index, 1, row, column));
+                    tokens.add(new Token(IToken.Kind.LSQUARE, currToken.toString(), index, 1, row, column));
                 else
-                    tokens.add(new Token(IToken.Kind.RSQUARE, "]", index, 1, row, column));
-                index++;
-                column++;
+                    tokens.add(new Token(IToken.Kind.RSQUARE, currToken.toString(), index, 1, row, column));
                 currState = State.START;
             }
             case '%' -> {
-                tokens.add(new Token(IToken.Kind.MOD, "%", index, 1, row, column));
-                index++;
-                column++;
+                tokens.add(new Token(IToken.Kind.MOD, currToken.toString(), index, 1, row, column));
                 currState = State.START;
             }
             case '|' -> {
-                tokens.add(new Token(IToken.Kind.OR, "|", index, 1, row, column));
-                index++;
-                column++;
+                tokens.add(new Token(IToken.Kind.OR, currToken.toString(), index, 1, row, column));
                 currState = State.START;
             }
             case '^' -> {
-                tokens.add(new Token(IToken.Kind.RETURN, "^", index, 1, row, column));
-                index++;
-                column++;
+                tokens.add(new Token(IToken.Kind.RETURN, currToken.toString(), index, 1, row, column));
                 currState = State.START;
             }
             case ';' -> {
-                tokens.add(new Token(IToken.Kind.SEMI, ";", index, 1, row, column));
-                index++;
-                column++;
+                tokens.add(new Token(IToken.Kind.SEMI, currToken.toString(), index, 1, row, column));
                 currState = State.START;
             }
             case '*' -> {
-                tokens.add(new Token(IToken.Kind.TIMES, "*", index, 1, row, column));
-                index++;
-                column++;
+                tokens.add(new Token(IToken.Kind.TIMES, currToken.toString(), index, 1, row, column));
                 currState = State.START;
             }
+            case '=' -> {
+                currState = State.HAVE_EQ;
+            }
+            case '>' -> {
+                currState = State.HAVE_GT;
+            }
+            case '<' -> {
+                currState = State.HAVE_LT;
+            }
+            case '!' -> {
+                currState = State.HAVE_BANG;
+            }
+            case  '-' -> {
+                currState = State.HAVE_MINUS;
+            }
         }
-
+        index++;
+        column++;
         return new ArrayList<>(Arrays.asList(row, column, index));
     }
 

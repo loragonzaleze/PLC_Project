@@ -4,13 +4,13 @@ public class Main {
     public static void main(String[] args){
 
         String input = """
-				+ 
+				+\t= 
 				- 	 
 				""";
-        ILexer lexer = CompilerComponentFactory.getLexer(input);
+        String sample = "Hello World!";
+        System.out.println(sample);
+        sample = sample + 'i';
+        System.out.println(sample);
 
-        for(int i = 0; i < input.length(); i++){
-            System.out.println((input.charAt(i) == '\n') + " " + input.charAt(i));
-        }
     }
 }

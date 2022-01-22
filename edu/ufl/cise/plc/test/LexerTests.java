@@ -187,5 +187,83 @@ public class LexerTests {
 	}
 
 	//Custom tests
+	@Test
+	public void testSingleChars() throws LexicalException{
+		String input = """
+				+       
+				-
+				*/  
+				[;]          
+				""";
+		show(input);
+		ILexer lexer = getLexer(input);
+		checkToken(lexer.next(), Kind.PLUS, 0,0);
+		checkToken(lexer.next(), Kind.MINUS, 1,0);
+		checkToken(lexer.next(), Kind.TIMES, 2, 0);
+		checkToken(lexer.next(), Kind.DIV, 2, 1);
+		checkToken(lexer.next(), Kind.LSQUARE, 3, 0);
+		checkToken(lexer.next(), Kind.SEMI, 3, 1);
+		checkToken(lexer.next(), Kind.RSQUARE, 3, 2);
+		checkEOF(lexer.next());
+	}
+
+	@Test
+	public void testTabs() throws LexicalException{
+		String input = """
+				+	
+				*
+				[=
+				]
+				= ==
+				""";
+		show(input);
+		ILexer lexer = getLexer(input);
+		checkToken(lexer.next(), Kind.PLUS, 0, 0);
+		checkToken(lexer.next(), Kind.TIMES, 1, 0);
+		checkToken(lexer.next(), Kind.LSQUARE, 2, 0);
+		checkToken(lexer.next(), Kind.ASSIGN, 2, 1);
+		checkToken(lexer.next(), Kind.RSQUARE, 3, 0);
+		checkToken(lexer.next(), Kind.ASSIGN, 4, 0);
+		checkToken(lexer.next(), Kind.EQUALS, 4, 2);
+		checkEOF(lexer.next());
+	}
+
+	@Test
+	public void testLengthTwoTokens() throws LexicalException{
+		String input = """
+				->>
+				==
+				""";
+		show(input);
+		ILexer lexer = getLexer(input);
+		checkToken(lexer.next(), Kind.RARROW, 0, 0);
+		checkToken(lexer.next(), Kind.GT, 0, 2);
+		checkToken(lexer.next(), Kind.EQUALS, 1, 0);
+		checkEOF(lexer.next());
+	}
+
+	@Test
+	public void testEqualsAndAssign() throws LexicalException{
+		String input = """
+				= == === = 
+				=====
+				= = = ==
+				""";
+		show(input);
+		ILexer lexer = getLexer(input);
+		checkToken(lexer.next(),Kind.ASSIGN,0,0);
+		checkToken(lexer.next(),Kind.EQUALS,0,2);
+		checkToken(lexer.next(),Kind.EQUALS,0,5);
+		checkToken(lexer.next(),Kind.ASSIGN,0,7);
+		checkToken(lexer.next(), Kind.ASSIGN, 0, 9);
+		checkToken(lexer.next(), Kind.EQUALS, 1, 0);
+		checkToken(lexer.next(), Kind.EQUALS, 1, 2);
+		checkToken(lexer.next(), Kind.ASSIGN, 1, 4);
+		checkToken(lexer.next(), Kind.ASSIGN, 2, 0);
+		checkToken(lexer.next(), Kind.ASSIGN, 2, 2);
+		checkToken(lexer.next(), Kind.ASSIGN, 2, 4);
+		checkToken(lexer.next(), Kind.EQUALS, 2, 6);
+		checkEOF(lexer.next());
+	}
 
 }

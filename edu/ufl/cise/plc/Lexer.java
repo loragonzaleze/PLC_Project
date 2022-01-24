@@ -201,6 +201,16 @@ public class Lexer implements ILexer{
             case  '-' -> {
                 currState = State.HAVE_MINUS;
             }
+
+            // Case NUMS
+            case '1', '2', '3', '4', '5', '6', '7', '8', '9', '0' -> {
+                if(currentChar == '0'){
+                    tokens.add(new Token(IToken.Kind.FLOAT_LIT, currToken.toString(), index, 1, row, column));
+                    currState = State.HAVE_ZERO;
+                }
+                tokens.add(new Token(IToken.Kind.INT_LIT, currToken.toString(), index, 1, row, column));
+                currState = State.IN_NUM;
+            }
         }
         index++;
         column++;

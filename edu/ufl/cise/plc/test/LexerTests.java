@@ -266,4 +266,25 @@ public class LexerTests {
 		checkEOF(lexer.next());
 	}
 
+	@Test
+	public void testMinusAndRArrows() throws LexicalException{
+		String input = """
+				->=->==-> -		
+				==--->
+				""";
+		show(input);
+		ILexer lexer = getLexer(input);
+		checkToken(lexer.next(), Kind.RARROW, 0, 0);
+		checkToken(lexer.next(), Kind.ASSIGN, 0, 2);
+		checkToken(lexer.next(), Kind.RARROW, 0, 3);
+		checkToken(lexer.next(), Kind.EQUALS, 0, 5);
+		checkToken(lexer.next(), Kind.RARROW, 0, 7);
+		checkToken(lexer.next(), Kind.MINUS, 0, 10);
+		checkToken(lexer.next(), Kind.EQUALS, 1, 0);
+		checkToken(lexer.next(), Kind.MINUS, 1, 2);
+		checkToken(lexer.next(), Kind.MINUS, 1, 3);
+		checkToken(lexer.next(), Kind.RARROW, 1, 4);
+		checkEOF(lexer.next());
+	}
+
 }

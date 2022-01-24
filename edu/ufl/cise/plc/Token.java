@@ -10,7 +10,7 @@ public class Token implements IToken {
 
         this.kind = kind;
         this.input = input;
-        this.pos = pos;
+        this.pos = pos; //Position within string where token starts
         this.length = length;
         this.location = new SourceLocation(line, column);
 

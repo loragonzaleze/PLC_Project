@@ -43,7 +43,6 @@ public class Lexer implements ILexer{
             char currentChar = code.charAt(idx);
             switch(currState){
                 case START -> {
-                    currentToken.append(currentChar);
                     ArrayList<Integer> positions = startState(idx, row, column, currentToken);
                     row = positions.get(0);
                     column = positions.get(1);
@@ -67,8 +66,13 @@ public class Lexer implements ILexer{
                     column = positions.get(1);
                     idx = positions.get(2);
                 }
-                default -> System.out.println("looool");
-
+                case HAVE_MINUS -> {
+                    ArrayList<Integer> positions = haveMinusState(idx, row, column, currentToken);
+                    row = positions.get(0);
+                    column = positions.get(1);
+                    idx = positions.get(2);
+                }
+                default -> System.out.println("Value of currentChar: " + (int)currentChar + " Current State: " + currState);
             }
 
         }
@@ -76,6 +80,8 @@ public class Lexer implements ILexer{
         tokens.add(new Token(IToken.Kind.EOF, "sentinel", 0, 0, 0, 0));
 
     }
+
+
 
     private ArrayList<Integer> inIdentState(int index, int row, int column, StringBuilder currToken){
         char currentChar = code.charAt(index);
@@ -89,24 +95,56 @@ public class Lexer implements ILexer{
         switch(currentChar){
             case '=' -> {
                 currToken.append(currentChar);
-                tokens.add(new Token(IToken.Kind.EQUALS, currToken.toString(), index, 2, row, column - 1));
+                tokens.add(new Token(IToken.Kind.EQUALS, currToken.toString(), index - 1, 2, row, column - 1));
                 column++;
+                index++;
             }
             case '\n' -> {
-                tokens.add(new Token(IToken.Kind.ASSIGN, currToken.toString(), index, 1, row, column - 1));
+                tokens.add(new Token(IToken.Kind.ASSIGN, currToken.toString(), index - 1, 1, row, column - 1));
                 row++;
+                index++;
                 column = 0;
+
             }
             case '\t' -> {
-                tokens.add(new Token(IToken.Kind.ASSIGN, currToken.toString(), index, 1, row, column - 1));
+                tokens.add(new Token(IToken.Kind.ASSIGN, currToken.toString(), index - 1, 1, row, column - 1));
                 column += 3;
+                index++;
             }
             default -> {
-                tokens.add(new Token(IToken.Kind.ASSIGN, currToken.toString(), index, 1, row, column - 1));
-                column++;
+                tokens.add(new Token(IToken.Kind.ASSIGN, currToken.toString(), index - 1, 1, row, column - 1));
             }
         }
-        index++;
+        currState = State.START;
+        currToken.setLength(0);
+        return new ArrayList<Integer>(Arrays.asList(row, column, index));
+    }
+    // HAVE_MINUS, // '-' -> '->' | '-'
+    private ArrayList<Integer> haveMinusState(int index, int row, int column, StringBuilder currToken){
+        char currentChar = code.charAt(index);
+        switch(currentChar){
+            case '>' -> {
+                currToken.append(currentChar);
+                tokens.add(new Token(IToken.Kind.RARROW, currToken.toString(), index, 2, row, column - 1));
+                column++;
+                index++;
+            }
+            case '\n' -> {
+                tokens.add(new Token(IToken.Kind.MINUS, currToken.toString(), index, 1, row, column - 1));
+                row++;
+                column = 0;
+                index++;
+            }
+            case '\t' -> {
+                tokens.add(new Token(IToken.Kind.MINUS, currToken.toString(), index, 1, row, column - 1));
+                column += 3;
+                index++;
+            }
+            default -> {
+                tokens.add(new Token(IToken.Kind.MINUS, currToken.toString(), index, 1, row, column - 1));
+            }
+        }
+
         currToken.setLength(0);
         currState = State.START;
 
@@ -116,7 +154,6 @@ public class Lexer implements ILexer{
 
     private ArrayList<Integer> startState(int index, int row, int column, StringBuilder currToken){
         char currentChar = code.charAt(index);
-        int start = index;
         if(currentChar == '\t'){
             index++;
             column += 3;
@@ -133,6 +170,7 @@ public class Lexer implements ILexer{
 
         switch(currentChar){
             case '+' -> {
+                currToken.append(currentChar);
                 tokens.add(new Token(IToken.Kind.PLUS, currToken.toString(), index, 1, row, column));
                 currState = State.START;
             }
@@ -140,6 +178,7 @@ public class Lexer implements ILexer{
                 currState = State.START;
             }
             case '&' -> {
+                currToken.append(currentChar);
                 tokens.add(new Token(IToken.Kind.AND, currToken.toString(), index, 1, row, column));
                 currState = State.START;
             }
@@ -149,10 +188,12 @@ public class Lexer implements ILexer{
                 currState = State.START;
             }
             case '/' -> {
+                currToken.append(currentChar);
                 tokens.add(new Token(IToken.Kind.DIV, currToken.toString(), index, 1, row, column));
                 currState = State.START;
             }
             case '(', ')' -> {
+                currToken.append(currentChar);
                 if(currentChar == '(')
                     tokens.add(new Token(IToken.Kind.LPAREN, currToken.toString(), index, 1, row, column));
                 else
@@ -160,6 +201,7 @@ public class Lexer implements ILexer{
                 currState = State.START;
             }
             case '[', ']' -> {
+                currToken.append(currentChar);
                 if(currentChar == '[')
                     tokens.add(new Token(IToken.Kind.LSQUARE, currToken.toString(), index, 1, row, column));
                 else
@@ -167,10 +209,12 @@ public class Lexer implements ILexer{
                 currState = State.START;
             }
             case '%' -> {
+                currToken.append(currentChar);
                 tokens.add(new Token(IToken.Kind.MOD, currToken.toString(), index, 1, row, column));
                 currState = State.START;
             }
             case '|' -> {
+                currToken.append(currentChar);
                 tokens.add(new Token(IToken.Kind.OR, currToken.toString(), index, 1, row, column));
                 currState = State.START;
             }
@@ -179,18 +223,26 @@ public class Lexer implements ILexer{
                 currState = State.START;
             }
             case ';' -> {
+                currToken.append(currentChar);
                 tokens.add(new Token(IToken.Kind.SEMI, currToken.toString(), index, 1, row, column));
                 currState = State.START;
             }
             case '*' -> {
+                currToken.append(currentChar);
                 tokens.add(new Token(IToken.Kind.TIMES, currToken.toString(), index, 1, row, column));
                 currState = State.START;
             }
             case '=' -> {
+                currToken.append(currentChar);
                 currState = State.HAVE_EQ;
             }
             case '>' -> {
-                currState = State.HAVE_GT;
+                if(currState == State.HAVE_MINUS){ //If part of a right arrow '->'
+                    currToken.append(currentChar);
+                }
+                else{
+                    currState = State.HAVE_GT;
+                }
             }
             case '<' -> {
                 currState = State.HAVE_LT;
@@ -198,7 +250,8 @@ public class Lexer implements ILexer{
             case '!' -> {
                 currState = State.HAVE_BANG;
             }
-            case  '-' -> {
+            case '-' -> {
+                currToken.append(currentChar);
                 currState = State.HAVE_MINUS;
             }
         }

@@ -270,7 +270,7 @@ public class LexerTests {
 	public void testMinusAndRArrows() throws LexicalException{
 		String input = """
 				->=->==-> -		
-				==--->
+				==--->!!=>->
 				""";
 		show(input);
 		ILexer lexer = getLexer(input);
@@ -284,7 +284,37 @@ public class LexerTests {
 		checkToken(lexer.next(), Kind.MINUS, 1, 2);
 		checkToken(lexer.next(), Kind.MINUS, 1, 3);
 		checkToken(lexer.next(), Kind.RARROW, 1, 4);
+		checkToken(lexer.next(), Kind.BANG, 1, 6);
+		checkToken(lexer.next(), Kind.NOT_EQUALS, 1,7);
+		checkToken(lexer.next(), Kind.GT, 1, 9);
+		checkToken(lexer.next(), Kind.RARROW, 1, 10);
 		checkEOF(lexer.next());
 	}
+
+	@Test
+	public void testBang() throws LexicalException{
+		String input = """
+				!=
+				!!
+				!=!
+				!!=>>>=<-<<<
+				""";
+		show(input);
+		ILexer lexer = getLexer(input);
+		checkToken(lexer.next(), Kind.NOT_EQUALS, 0, 0);
+		checkToken(lexer.next(), Kind.BANG, 1, 0);
+		checkToken(lexer.next(), Kind.BANG, 1, 1);
+		checkToken(lexer.next(), Kind.NOT_EQUALS, 2, 0);
+		checkToken(lexer.next(), Kind.BANG, 2, 2);
+		checkToken(lexer.next(), Kind.BANG, 3, 0 );
+		checkToken(lexer.next(), Kind.NOT_EQUALS, 3, 1);
+		checkToken(lexer.next(), Kind.RANGLE, 3, 3);
+		checkToken(lexer.next(), Kind.GE, 3, 5);
+		checkToken(lexer.next(), Kind.LARROW, 3,7);
+		checkToken(lexer.next(), Kind.LANGLE, 3, 9);
+		checkToken(lexer.next(), Kind.LT, 3, 11);
+		checkEOF(lexer.next());
+	}
+
 
 }

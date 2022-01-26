@@ -1,7 +1,8 @@
 package edu.ufl.cise.plc;
 
-import java.util.ArrayList;
-import java.util.Arrays;
+import java.util.*;
+
+import static java.util.Map.entry;
 
 public class Lexer implements ILexer{
 
@@ -24,6 +25,40 @@ public class Lexer implements ILexer{
         HAVE_GT, // '>' -> '>>' | '>=' | '>' DONE
         HAVE_BANG // '!' -> '!=' | '!' DONE
     }
+    private final Map<String, IToken.Kind> reserved = Map.ofEntries(
+            entry("string", IToken.Kind.TYPE),
+            entry("int", IToken.Kind.TYPE),
+            entry("float", IToken.Kind.TYPE),
+            entry("boolean", IToken.Kind.TYPE),
+            entry("color", IToken.Kind.TYPE),
+            entry("image", IToken.Kind.TYPE),
+            entry("void", IToken.Kind.TYPE),
+            entry("getWidth", IToken.Kind.IMAGE_OP),
+            entry("getHeight", IToken.Kind.IMAGE_OP),
+            entry("getRed", IToken.Kind.COLOR_OP),
+            entry("getGreen", IToken.Kind.COLOR_OP),
+            entry("getBlue", IToken.Kind.COLOR_OP),
+            entry("BLACK", IToken.Kind.COLOR_CONST),
+            entry("BLUE", IToken.Kind.COLOR_CONST),
+            entry("CYAN", IToken.Kind.COLOR_CONST),
+            entry("DARK_GRAY", IToken.Kind.COLOR_CONST),
+            entry("GRAY", IToken.Kind.COLOR_CONST),
+            entry("GREEN", IToken.Kind.COLOR_CONST),
+            entry("LIGHT_GRAY", IToken.Kind.COLOR_CONST),
+            entry("MAGENTA", IToken.Kind.COLOR_CONST),
+            entry("ORANGE", IToken.Kind.COLOR_CONST),
+            entry("PINK", IToken.Kind.COLOR_CONST),
+            entry("RED", IToken.Kind.COLOR_CONST),
+            entry("WHITE", IToken.Kind.COLOR_CONST),
+            entry("YELLOW", IToken.Kind.COLOR_CONST),
+            entry("true", IToken.Kind.BOOLEAN_LIT),
+            entry("false", IToken.Kind.BOOLEAN_LIT),
+            entry("if", IToken.Kind.KW_IF),
+            entry("else", IToken.Kind.KW_ELSE),
+            entry("fi", IToken.Kind.KW_FI),
+            entry("write", IToken.Kind.KW_WRITE),
+            entry("console", IToken.Kind.KW_CONSOLE)
+    );
 
     public Lexer(String code){
         this.code = code;
@@ -31,6 +66,7 @@ public class Lexer implements ILexer{
         this.tokens = new ArrayList<>();
         this.currState = State.START;
         this.codeLength = code.length();
+
         dfa();
     }
 
@@ -53,7 +89,10 @@ public class Lexer implements ILexer{
                     }
                 }
                 case IN_IDENT -> {
-                    System.out.println("IN_IDENT");
+                    ArrayList<Integer> positions = inIdentState(idx, row, column, currentToken);
+                    row = positions.get(0);
+                    column = positions.get(1);
+                    idx = positions.get(2);
                 }
                 case HAVE_ZERO -> {
                     System.out.println("HAVE_ZERO");
@@ -99,6 +138,42 @@ public class Lexer implements ILexer{
         //Sentinel value representing end of file
         tokens.add(new Token(IToken.Kind.EOF, "sentinel", 0, 0, 0, 0));
 
+    }
+
+    //TODO: Might add global column, row, variable to facilitate strings
+    private ArrayList<Integer> inIdentState(int index, int row, int column, StringBuilder currToken){
+        char currentChar = code.charAt(index);
+        if (Character.isLetter(currentChar) || currentChar == '_' || currentChar == '$' || Character.isDigit(currentChar)){
+            currToken.append(currentChar);
+            index++;
+            column++;
+            return new ArrayList<>(Arrays.asList(row, column, index));
+        }
+
+        String strToken = currToken.toString();
+        //CHECK FOR RESERVED WORDS HERE
+        if(reserved.containsKey(strToken)){
+            tokens.add(new Token(reserved.get(strToken), strToken, index - strToken.length(), strToken.length(), row, column - strToken.length()));
+        }
+        else{
+            tokens.add(new Token(IToken.Kind.IDENT, currToken.toString(), index - currToken.length(), currToken.length(), row, column - currToken.length()));
+        }
+
+        switch(currentChar){
+            case '\n' -> {
+                row++;
+                index++;
+                column = 0;
+
+            }
+            case '\t' -> {
+                column += 3;
+                index++;
+            }
+        }
+        currState = State.START;
+        currToken.setLength(0);
+        return new ArrayList<>(Arrays.asList(row, column, index));
     }
 
     // '<' -> '<<' | '<=' | '<' | '<-'
@@ -174,14 +249,6 @@ public class Lexer implements ILexer{
         }
         currState = State.START;
         currToken.setLength(0);
-
-        return new ArrayList<>(Arrays.asList(row, column, index));
-    }
-
-
-
-    private ArrayList<Integer> inIdentState(int index, int row, int column, StringBuilder currToken){
-        char currentChar = code.charAt(index);
 
         return new ArrayList<>(Arrays.asList(row, column, index));
     }
@@ -288,23 +355,28 @@ public class Lexer implements ILexer{
 
     private ArrayList<Integer> startState(int index, int row, int column, StringBuilder currToken){
         char currentChar = code.charAt(index);
-        if(currentChar == '\t'){
+        if(currentChar == '\t' && currState == State.START){
             index++;
             column += 3;
-            currState = State.START;
             return new ArrayList<>(Arrays.asList(row, column, index));
         }
-        if(currentChar == '\n'){
+        if(currentChar == '\n' && currState == State.START){
             index++;
             row++;
             column = 0;
-            currState = State.START;
+            return new ArrayList<>(Arrays.asList(row, column, index));
+        }
+        //For idents:
+        if ((Character.isLetter(currentChar) || currentChar == '_' || currentChar == '$') && currState == State.START){
+            index++;
+            column++;
+            currToken.append(currentChar);
+            currState = State.IN_IDENT;
             return new ArrayList<>(Arrays.asList(row, column, index));
         }
 
         switch(currentChar){
 
-            // For idents
             /**Everything below this line is to process symbols**/
             case '+' -> {
                 currToken.append(currentChar);

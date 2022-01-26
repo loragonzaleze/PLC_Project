@@ -37,6 +37,13 @@ public class LexerTests {
 		assertEquals(expectedKind, t.getKind());
 		assertEquals(new IToken.SourceLocation(expectedLine,expectedColumn), t.getSourceLocation());
 	}
+
+	void checkReserved(IToken t, Kind expectedKind, String expectedName, int expectedLine, int expectedColumn){
+		assertEquals(expectedName, t.getText());
+		assertEquals(expectedKind, t.getKind());
+		assertEquals(expectedLine, t.getSourceLocation().line());
+		assertEquals(expectedColumn, t.getSourceLocation().column());
+	}
 	
 	//check that this token is an IDENT and has the expected name
 	void checkIdent(IToken t, String expectedName){
@@ -142,7 +149,10 @@ public class LexerTests {
 		checkIdent(lexer.next(), "ghi", 2,5);
 		checkEOF(lexer.next());
 	}
-	
+
+	public void testIdent1() throws LexicalException {
+
+	}
 	
 	@Test
 	public void testEquals0() throws LexicalException {
@@ -211,20 +221,26 @@ public class LexerTests {
 	public void testTabs() throws LexicalException{
 		String input = """
 				+	
-				*
-				[=
+				*lmao>>>>>
+				[->=
 				]
-				= ==
+				= == lol
 				""";
 		show(input);
 		ILexer lexer = getLexer(input);
 		checkToken(lexer.next(), Kind.PLUS, 0, 0);
 		checkToken(lexer.next(), Kind.TIMES, 1, 0);
+		checkToken(lexer.next(), Kind.IDENT, 1, 1);
+		checkToken(lexer.next(), Kind.RANGLE, 1, 5);
+		checkToken(lexer.next(), Kind.RANGLE, 1, 7);
+		checkToken(lexer.next(), Kind.GT, 1, 9);
 		checkToken(lexer.next(), Kind.LSQUARE, 2, 0);
-		checkToken(lexer.next(), Kind.ASSIGN, 2, 1);
+		checkToken(lexer.next(), Kind.RARROW, 2, 1);
+		checkToken(lexer.next(), Kind.ASSIGN, 2, 3);
 		checkToken(lexer.next(), Kind.RSQUARE, 3, 0);
 		checkToken(lexer.next(), Kind.ASSIGN, 4, 0);
 		checkToken(lexer.next(), Kind.EQUALS, 4, 2);
+		checkIdent(lexer.next(), "lol", 4,5);
 		checkEOF(lexer.next());
 	}
 
@@ -313,6 +329,60 @@ public class LexerTests {
 		checkToken(lexer.next(), Kind.LARROW, 3,7);
 		checkToken(lexer.next(), Kind.LANGLE, 3, 9);
 		checkToken(lexer.next(), Kind.LT, 3, 11);
+		checkEOF(lexer.next());
+	}
+
+	@Test
+	public void testIdent() throws LexicalException{
+		String input = """
+				if else
+				this
+				sampleToken = number
+				""";
+		show(input);
+		ILexer lexer = getLexer(input);
+
+		checkToken(lexer.next(), Kind.KW_IF, 0, 0);
+		checkToken(lexer.next(), Kind.KW_ELSE, 0, 3);
+		checkToken(lexer.next(), Kind.IDENT, 1, 0);
+		checkToken(lexer.next(), Kind.IDENT, 2, 0);
+		checkToken(lexer.next(), Kind.ASSIGN, 2, 12);
+		checkToken(lexer.next(), Kind.IDENT, 2, 14);
+
+
+
+		checkEOF(lexer.next());
+	}
+
+	@Test
+	public void testIdentNames() throws LexicalException{
+		String input = """
+				if else
+				this
+				sampleToken = number
+				getGreen()
+				ifelse
+				N_0
+				string water = i
+				""";
+		show(input);
+		ILexer lexer = getLexer(input);
+
+		checkReserved(lexer.next(), Kind.KW_IF,"if", 0,0);
+		checkReserved(lexer.next(), Kind.KW_ELSE,"else", 0,3);
+		checkReserved(lexer.next(), Kind.IDENT,"this", 1,0);
+		checkReserved(lexer.next(), Kind.IDENT,"sampleToken", 2,0);
+		checkReserved(lexer.next(), Kind.ASSIGN,"=", 2,12);
+		checkReserved(lexer.next(), Kind.IDENT, "number", 2,14);
+		checkReserved(lexer.next(), Kind.COLOR_OP, "getGreen", 3, 0);
+		checkReserved(lexer.next(), Kind.LPAREN,"(", 3, 8);
+		checkReserved(lexer.next(), Kind.RPAREN, ")", 3, 9);
+		checkReserved(lexer.next(), Kind.IDENT, "ifelse", 4, 0);
+		checkReserved(lexer.next(), Kind.IDENT, "N_0", 5, 0);
+		checkReserved(lexer.next(), Kind.TYPE, "string", 6, 0);
+		checkReserved(lexer.next(), Kind.IDENT, "water", 6, 7);
+		checkReserved(lexer.next(), Kind.ASSIGN, "=", 6, 13);
+		checkReserved(lexer.next(), Kind.IDENT, "i", 6, 15);
 		checkEOF(lexer.next());
 	}
 

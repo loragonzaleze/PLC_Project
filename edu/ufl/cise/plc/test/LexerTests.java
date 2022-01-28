@@ -395,5 +395,71 @@ public class LexerTests {
 		checkEOF(lexer.next());
 	}
 
+	@Test
+	public void testNum() throws LexicalException{
+		String input = """
+				4035
+				34 93
+				359
+				""";
+		show(input);
+		ILexer lexer = getLexer(input);
 
+		checkToken(lexer.next(), Kind.INT_LIT, 0, 0);
+		checkToken(lexer.next(), Kind.INT_LIT, 1, 0);
+		checkToken(lexer.next(), Kind.INT_LIT, 1, 3);
+		checkToken(lexer.next(), Kind.INT_LIT, 2, 0);
+		checkEOF(lexer.next());
+	}
+
+	@Test
+	public void testFloat() throws LexicalException{
+		String input = """
+				4.035
+				3.4 9.3
+				3.59
+				""";
+		show(input);
+		ILexer lexer = getLexer(input);
+
+		checkToken(lexer.next(), Kind.FLOAT_LIT, 0, 0);
+		checkToken(lexer.next(), Kind.FLOAT_LIT, 1, 0);
+		checkToken(lexer.next(), Kind.FLOAT_LIT, 1, 4);
+		checkToken(lexer.next(), Kind.FLOAT_LIT, 2, 0);
+		checkEOF(lexer.next());
+	}
+
+	@Test
+	public void testZeroFloat() throws LexicalException{
+		String input = """
+				0.035
+				0.4 0.3
+				0.59
+				""";
+		show(input);
+		ILexer lexer = getLexer(input);
+
+		checkToken(lexer.next(), Kind.FLOAT_LIT, 0, 0);
+		checkToken(lexer.next(), Kind.FLOAT_LIT, 1, 0);
+		checkToken(lexer.next(), Kind.FLOAT_LIT, 1, 4);
+		checkToken(lexer.next(), Kind.FLOAT_LIT, 2, 0);
+		checkEOF(lexer.next());
+	}
+
+	@Test
+	public void intToFloat() throws LexicalException{
+		String input = """
+				30.035
+				20.4 0.3
+				70.59
+				""";
+		show(input);
+		ILexer lexer = getLexer(input);
+
+		checkToken(lexer.next(), Kind.FLOAT_LIT, 0, 0);
+		checkToken(lexer.next(), Kind.FLOAT_LIT, 1, 0);
+		checkToken(lexer.next(), Kind.FLOAT_LIT, 1, 5);
+		checkToken(lexer.next(), Kind.FLOAT_LIT, 2, 0);
+		checkEOF(lexer.next());
+	}
 }

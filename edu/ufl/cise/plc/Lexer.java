@@ -100,10 +100,32 @@ public class Lexer implements ILexer{
                     idx = positions.get(2);
                 }
                 case HAVE_ZERO -> {
-                    System.out.println("HAVE_ZERO");
+                    ArrayList<Integer> positions = haveZero(idx, row, column, currentToken);
+                    row = positions.get(0);
+                    column = positions.get(1);
+                    idx = positions.get(2);
+                    System.out.println("HAVE_ZERO"); // If has a zero, then prepare for HAVE_DOT
                 }
                 case HAVE_DOT -> {
-                    System.out.println("HAVE_DOT");
+                    ArrayList<Integer> positions = haveDot(idx, row, column, currentToken);
+                    row = positions.get(0);
+                    column = positions.get(1);
+                    idx = positions.get(2);
+                    System.out.println("HAVE_DOT"); // Look for more numbers for IN_FLOAT
+                }
+                case IN_FLOAT -> {
+                    ArrayList<Integer> positions = inFloat(idx, row, column, currentToken);
+                    row = positions.get(0);
+                    column = positions.get(1);
+                    idx = positions.get(2);
+                    System.out.println("HAVE_FLOAT"); // Continue until no more numbers
+                }
+                case IN_NUM -> {
+                    ArrayList<Integer> positions = inNum(idx, row, column, currentToken);
+                    row = positions.get(0);
+                    column = positions.get(1);
+                    idx = positions.get(2);
+                    System.out.println("IN_NUM"); // Look for more numbers or more dots to become a float
                 }
                 case HAVE_EQ -> {
                     ArrayList<Integer> positions = haveEqualState(idx, row, column, currentToken);
@@ -355,6 +377,121 @@ public class Lexer implements ILexer{
         return new ArrayList<Integer>(Arrays.asList(row, column, index));
     }
 
+    // '0' -> '.'
+    private ArrayList<Integer> haveZero(int index, int row, int column, StringBuilder currToken){
+        char currentChar = code.charAt(index);
+        switch(currentChar){
+            case '.' -> {
+                currToken.append(currentChar);
+                column++;
+                index++;
+            }
+            //TODO: Add error handling for if next character is not a '.'
+        }
+        currState = State.HAVE_DOT;
+        currToken.setLength(currToken.length());
+        return new ArrayList<Integer>(Arrays.asList(row, column, index));
+    }
+
+    // '.' -> '0'..'9'
+    private ArrayList<Integer> haveDot(int index, int row, int column, StringBuilder currToken){
+        char currentChar = code.charAt(index);
+        switch(currentChar) {
+            case '1', '2', '3', '4', '5', '6', '7', '8', '9', '0' -> {
+                currToken.append(currentChar);
+                column++;
+                index++;
+                currState = State.IN_FLOAT;
+            }
+
+            //TODO: Add error handling for if next character is not '0'..'9' or expected end
+        }
+
+        return new ArrayList<Integer>(Arrays.asList(row, column, index));
+    }
+
+    // '0'..'9' -> '0'..'9'
+    private ArrayList<Integer> inFloat(int index, int row, int column, StringBuilder currToken){
+        char currentChar = code.charAt(index);
+        switch(currentChar){
+            case '1', '2', '3', '4', '5', '6', '7', '8', '9', '0' -> {
+                currToken.append(currentChar);
+                column++;
+                index++;
+            }
+
+            case '\n' -> {
+                tokens.add(new Token(IToken.Kind.FLOAT_LIT, currToken.toString(), index - (currToken.length() - 1), currToken.length(), row, column - (currToken.length())));
+                row++;
+                index++;
+                column = 0;
+                currState = State.START;
+                currToken.setLength(0);
+
+            }
+            case '\t' -> {
+                tokens.add(new Token(IToken.Kind.FLOAT_LIT, currToken.toString(), index - (currToken.length() - 1), currToken.length(), row, column - (currToken.length())));
+                column += 3;
+                index++;
+                currState = State.START;
+                currToken.setLength(0);
+            }
+            default -> {
+                tokens.add(new Token(IToken.Kind.FLOAT_LIT, currToken.toString(), index - (currToken.length() - 1), currToken.length(), row, column - (currToken.length())));
+                currState = State.START;
+                currToken.setLength(0);
+            }
+
+            //TODO: Add error handling for if next character is not '0'..'9' or expected end
+        }
+        System.out.println(currentChar);
+        System.out.println(currToken);
+        return new ArrayList<Integer>(Arrays.asList(row, column, index));
+    }
+
+    // '1'..'9' -> '0'..'9' | '.'
+    private ArrayList<Integer> inNum(int index, int row, int column, StringBuilder currToken){
+        char currentChar = code.charAt(index);
+        switch(currentChar){
+            case '1', '2', '3', '4', '5', '6', '7', '8', '9', '0' -> {
+                currToken.append(currentChar);
+                column++;
+                index++;
+            }
+            case '.' -> {
+                //if transitioning to a float
+                currToken.append(currentChar);
+                column++;
+                index++;
+                currState = State.HAVE_DOT;
+                //currToken.setLength(currToken.length() + 1);
+                System.out.println(currToken);
+
+            }
+            case '\n' -> {
+                tokens.add(new Token(IToken.Kind.INT_LIT, currToken.toString(), index - (currToken.length() - 1), currToken.length(), row, column - (currToken.length())));
+                row++;
+                index++;
+                column = 0;
+                currState = State.START;
+                currToken.setLength(0);
+            }
+            case '\t' -> {
+                tokens.add(new Token(IToken.Kind.INT_LIT, currToken.toString(), index - (currToken.length() - 1), currToken.length(), row, column - (currToken.length())));
+                column += 3;
+                index++;
+                currState = State.START;
+                currToken.setLength(0);
+            }
+            default -> {
+                tokens.add(new Token(IToken.Kind.INT_LIT, currToken.toString(), index - (currToken.length() - 1), currToken.length(), row, column - (currToken.length())));
+                currState = State.START;
+                currToken.setLength(0);
+            }
+            //TODO: Add error handling for if next character is not '0'..'9' or expected end
+        }
+        return new ArrayList<Integer>(Arrays.asList(row, column, index));
+    }
 
     private ArrayList<Integer> startState(int index, int row, int column, StringBuilder currToken){
         char currentChar = code.charAt(index);
@@ -483,6 +620,17 @@ public class Lexer implements ILexer{
                 tokens.add(new Token(IToken.Kind.ERROR, currToken.toString(), index, currToken.length(), row, column - currToken.length()));
                 currToken.setLength(0);
                 currState = State.HAS_ERROR;
+            }
+            // Case NUMS
+            case '1', '2', '3', '4', '5', '6', '7', '8', '9', '0' -> {
+                if(currentChar == '0'){
+                    currToken.append(currentChar);  //If there's a zero, prepare for a dot or not
+                    currState = State.HAVE_ZERO;
+                }
+                else {
+                    currToken.append(currentChar);      //If there's no zero, prepare for more numbers
+                    currState = State.IN_NUM;
+                }
             }
         }
         index++;

@@ -23,7 +23,8 @@ public class Lexer implements ILexer{
         HAVE_MINUS, // '-' -> '->' | '-' DONE
         HAVE_LT, // '<' -> '<<' | '<=' | '<' | '<-' DONE
         HAVE_GT, // '>' -> '>>' | '>=' | '>' DONE
-        HAVE_BANG // '!' -> '!=' | '!' DONE
+        HAVE_BANG, // '!' -> '!=' | '!' DONE
+        HAS_ERROR
     }
     private final Map<String, IToken.Kind> reserved = Map.ofEntries(
             entry("string", IToken.Kind.TYPE),
@@ -78,6 +79,10 @@ public class Lexer implements ILexer{
 
         while(idx < codeLength) {
             char currentChar = code.charAt(idx);
+            if(currState == State.HAS_ERROR){
+                break;
+            }
+
             switch(currState){
                 case START -> {
                     ArrayList<Integer> positions = startState(idx, row, column, currentToken);
@@ -130,8 +135,6 @@ public class Lexer implements ILexer{
                     column = positions.get(1);
                     idx = positions.get(2);
                 }
-
-                default -> System.out.println("Value of currentChar: " + (int)currentChar + " Current State: " + currState);
             }
 
         }
@@ -375,6 +378,11 @@ public class Lexer implements ILexer{
             return new ArrayList<>(Arrays.asList(row, column, index));
         }
 
+        //For numbers:
+        if((Character.isDigit(currentChar))){
+            //Logic for that
+        }
+
         switch(currentChar){
 
             /**Everything below this line is to process symbols**/
@@ -470,6 +478,12 @@ public class Lexer implements ILexer{
                 }
                 currToken.append(currentChar);
             }
+            default -> { //For a char that cannot belong as a start token
+                currToken.append(currentChar);
+                tokens.add(new Token(IToken.Kind.ERROR, currToken.toString(), index, currToken.length(), row, column - currToken.length()));
+                currToken.setLength(0);
+                currState = State.HAS_ERROR;
+            }
         }
         index++;
         column++;
@@ -479,6 +493,10 @@ public class Lexer implements ILexer{
 
     @Override
     public IToken next() throws LexicalException {
+       if(tokens.get(tokenPosition).getKind() == IToken.Kind.ERROR){
+           throw new LexicalException("Cannot have token " + tokens.get(tokenPosition).getText() + " here!");
+       }
+
        return tokens.get(tokenPosition++);
     }
 

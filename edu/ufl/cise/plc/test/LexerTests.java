@@ -140,7 +140,6 @@ public class LexerTests {
 				abc
 				  def
 				     ghi
-
 				""";
 		show(input);
 		ILexer lexer = getLexer(input);
@@ -348,10 +347,20 @@ public class LexerTests {
 		checkToken(lexer.next(), Kind.IDENT, 2, 0);
 		checkToken(lexer.next(), Kind.ASSIGN, 2, 12);
 		checkToken(lexer.next(), Kind.IDENT, 2, 14);
-
-
-
 		checkEOF(lexer.next());
+	}
+
+	@Test
+	public void testExceptions() throws LexicalException{
+		String input = """
+				00
+				""";
+		show(input);
+		ILexer lexer = getLexer(input);
+		assertThrows(LexicalException.class, () -> {
+			@SuppressWarnings("unused")
+			IToken token = lexer.next();
+		});
 	}
 
 	@Test

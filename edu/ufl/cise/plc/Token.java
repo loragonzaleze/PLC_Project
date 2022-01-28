@@ -33,12 +33,12 @@ public class Token implements IToken {
 
     @Override
     public int getIntValue() {
-        return 0;
+        return Integer.parseInt(input);
     }
 
     @Override
     public float getFloatValue() {
-        return 0;
+        return Float.parseFloat(input);
     }
 
     @Override

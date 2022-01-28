@@ -7,7 +7,7 @@ package edu.ufl.cise.plc;
 public class CompilerComponentFactory {
 	
 	//This method will be invoked to get an instance of your lexer.  
-	public static ILexer getLexer(String input) {
+	public static ILexer getLexer(String input) throws LexicalException {
 		return new Lexer(input);
 		/*throw new UnsupportedOperationException(
 				"CompilerComponentFactory must be modified to return an instance of your lexer");*/

@@ -15,7 +15,7 @@ import edu.ufl.cise.plc.LexicalException;
 
 public class LexerTests {
 
-	ILexer getLexer(String input){
+	ILexer getLexer(String input) throws LexicalException {
 		 return CompilerComponentFactory.getLexer(input);
 	}
 	
@@ -461,5 +461,18 @@ public class LexerTests {
 		checkToken(lexer.next(), Kind.FLOAT_LIT, 1, 5);
 		checkToken(lexer.next(), Kind.FLOAT_LIT, 2, 0);
 		checkEOF(lexer.next());
+	}
+
+	@Test
+	public void dotInvalid() throws LexicalException{
+		String input = """
+				..
+				""";
+		show(input);
+		ILexer lexer = getLexer(input);
+
+		Exception e = assertThrows(LexicalException.class, () -> {
+			lexer.next();
+		});
 	}
 }

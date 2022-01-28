@@ -104,28 +104,42 @@ public class Lexer implements ILexer{
                     row = positions.get(0);
                     column = positions.get(1);
                     idx = positions.get(2);
-                    System.out.println("HAVE_ZERO"); // If has a zero, then prepare for HAVE_DOT
+                    //System.out.println("HAVE_ZERO"); // If has a zero, then prepare for HAVE_DOT
                 }
                 case HAVE_DOT -> {
-                    ArrayList<Integer> positions = haveDot(idx, row, column, currentToken);
-                    row = positions.get(0);
-                    column = positions.get(1);
-                    idx = positions.get(2);
-                    System.out.println("HAVE_DOT"); // Look for more numbers for IN_FLOAT
+                    ArrayList<Integer> positions = null;
+                    try {
+                        positions = haveDot(idx, row, column, currentToken);
+                        row = positions.get(0);
+                        column = positions.get(1);
+                        idx = positions.get(2);
+                        //System.out.println("HAVE_DOT"); // Look for more numbers for IN_FLOAT
+                    } catch (LexicalException e) {
+                        e.printStackTrace();
+                        currState = State.HAS_ERROR;
+                    }
                 }
                 case IN_FLOAT -> {
                     ArrayList<Integer> positions = inFloat(idx, row, column, currentToken);
                     row = positions.get(0);
                     column = positions.get(1);
                     idx = positions.get(2);
-                    System.out.println("HAVE_FLOAT"); // Continue until no more numbers
+                    //System.out.println("HAVE_FLOAT"); // Continue until no more numbers
                 }
                 case IN_NUM -> {
-                    ArrayList<Integer> positions = inNum(idx, row, column, currentToken);
-                    row = positions.get(0);
-                    column = positions.get(1);
-                    idx = positions.get(2);
-                    System.out.println("IN_NUM"); // Look for more numbers or more dots to become a float
+                    try {
+                        ArrayList<Integer> positions = inNum(idx, row, column, currentToken);
+                        row = positions.get(0);
+                        column = positions.get(1);
+                        idx = positions.get(2);
+                        //System.out.println(currentToken);
+                    } catch (LexicalException e) {
+                        e.printStackTrace();
+                        currState = State.HAS_ERROR;
+                    }
+
+
+                    //System.out.println("IN_NUM"); // Look for more numbers or more dots to become a float
                 }
                 case HAVE_EQ -> {
                     ArrayList<Integer> positions = haveEqualState(idx, row, column, currentToken);
@@ -162,7 +176,6 @@ public class Lexer implements ILexer{
         }
         //Sentinel value representing end of file
         tokens.add(new Token(IToken.Kind.EOF, "sentinel", 0, 0, 0, 0));
-
     }
 
     //TODO: Might add global column, row, variable to facilitate strings
@@ -386,7 +399,6 @@ public class Lexer implements ILexer{
                 column++;
                 index++;
             }
-            //TODO: Add error handling for if next character is not a '.'
         }
         currState = State.HAVE_DOT;
         currToken.setLength(currToken.length());
@@ -394,19 +406,21 @@ public class Lexer implements ILexer{
     }
 
     // '.' -> '0'..'9'
-    private ArrayList<Integer> haveDot(int index, int row, int column, StringBuilder currToken){
+    private ArrayList<Integer> haveDot(int index, int row, int column, StringBuilder currToken) throws LexicalException {
         char currentChar = code.charAt(index);
-        switch(currentChar) {
-            case '1', '2', '3', '4', '5', '6', '7', '8', '9', '0' -> {
-                currToken.append(currentChar);
-                column++;
-                index++;
-                currState = State.IN_FLOAT;
-            }
+            switch (currentChar) {
+                case '1', '2', '3', '4', '5', '6', '7', '8', '9', '0' -> {
+                    currToken.append(currentChar);
+                    column++;
+                    index++;
+                    currState = State.IN_FLOAT;
+                }
+                default -> {
+                    throw new LexicalException("Not valid character after '.'", row, column);
+                }
+                //TODO: Add error handling for if next character is not '0'..'9' or expected end
 
-            //TODO: Add error handling for if next character is not '0'..'9' or expected end
         }
-
         return new ArrayList<Integer>(Arrays.asList(row, column, index));
     }
 
@@ -444,19 +458,23 @@ public class Lexer implements ILexer{
 
             //TODO: Add error handling for if next character is not '0'..'9' or expected end
         }
-        System.out.println(currentChar);
-        System.out.println(currToken);
+        //System.out.println(currentChar);
+        //System.out.println(currToken);
         return new ArrayList<Integer>(Arrays.asList(row, column, index));
     }
 
-    // '1'..'9' -> '0'..'9' | '.'
-    private ArrayList<Integer> inNum(int index, int row, int column, StringBuilder currToken){
+    // '1'..'9' -> '0'..'9' | '.' | 'a'..'Z'
+    private ArrayList<Integer> inNum(int index, int row, int column, StringBuilder currToken) throws LexicalException {
         char currentChar = code.charAt(index);
         switch(currentChar){
             case '1', '2', '3', '4', '5', '6', '7', '8', '9', '0' -> {
                 currToken.append(currentChar);
                 column++;
                 index++;
+                System.out.println(Long.parseLong(currToken.toString()));
+                if(Long.parseLong(currToken.toString()) > Integer.MAX_VALUE || (Long.parseLong(currToken.toString()) < Integer.MIN_VALUE)){                currToken.append(currentChar);
+                    //throw new LexicalException("Integer is too large to be a token", row, column);
+                }
             }
             case '.' -> {
                 //if transitioning to a float
@@ -465,8 +483,7 @@ public class Lexer implements ILexer{
                 index++;
                 currState = State.HAVE_DOT;
                 //currToken.setLength(currToken.length() + 1);
-                System.out.println(currToken);
-
+                //System.out.println(currToken);
             }
             case '\n' -> {
                 tokens.add(new Token(IToken.Kind.INT_LIT, currToken.toString(), index - (currToken.length() - 1), currToken.length(), row, column - (currToken.length())));
@@ -474,6 +491,7 @@ public class Lexer implements ILexer{
                 index++;
                 column = 0;
                 currState = State.START;
+
                 currToken.setLength(0);
             }
             case '\t' -> {
@@ -483,10 +501,22 @@ public class Lexer implements ILexer{
                 currState = State.START;
                 currToken.setLength(0);
             }
+            case 'a', 'b', 'c', 'd', 'e', 'f', 'g', 'h', 'i',
+                    'j', 'k', 'l', 'm', 'n', 'o', 'p', 'q', 'r',
+                    's', 't', 'u', 'v', 'w', 'x', 'y', 'z',
+                 'A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I',
+                    'J', 'K', 'L', 'M', 'N', 'O', 'P', 'Q', 'R',
+                    'S', 'T', 'U', 'V', 'W', 'X', 'Y', 'Z'-> {
+                currToken.append(currentChar);
+                tokens.add(new Token(IToken.Kind.INT_LIT, currToken.toString(), index - (currToken.length() - 1), currToken.length(), row, column - (currToken.length())));
+                column++;
+                index++;
+            }
             default -> {
                 tokens.add(new Token(IToken.Kind.INT_LIT, currToken.toString(), index - (currToken.length() - 1), currToken.length(), row, column - (currToken.length())));
                 currState = State.START;
                 currToken.setLength(0);
+                //throw new LexicalException("Token is invalid int", row, column);
             }
             //TODO: Add error handling for if next character is not '0'..'9' or expected end
         }

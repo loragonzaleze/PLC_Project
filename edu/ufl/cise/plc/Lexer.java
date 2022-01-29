@@ -14,11 +14,14 @@ public class Lexer implements ILexer{
     private final int codeLength;
     private enum State {
         START,
-        IN_IDENT,
-        HAVE_ZERO,
-        HAVE_DOT,
-        IN_FLOAT,
-        IN_NUM,
+        IN_IDENT,   // DONE? TODO: these areas require more testing for exception states -Luna
+        HAVE_ZERO,  // DONE
+        HAVE_DOT,   // DONE?
+        IN_FLOAT,   // DONE?
+        IN_NUM,     // DONE?
+        IN_STRING,  // working on it (string_lit)
+        IN_BSLASH,  // working on it (backslash)
+        IN_COMMENT, // TODO: Start on comments
         HAVE_EQ, // '=' -> '==' | '=' DONE
         HAVE_MINUS, // '-' -> '->' | '-' DONE
         HAVE_LT, // '<' -> '<<' | '<=' | '<' | '<-' DONE
@@ -106,6 +109,12 @@ public class Lexer implements ILexer{
                     idx = positions.get(2);
                     //System.out.println("HAVE_ZERO"); // If has a zero, then prepare for HAVE_DOT
                 }
+                case IN_BSLASH -> {
+                    ArrayList<Integer> positions = inBSlash(idx, row, column, currentToken);
+                    row = positions.get(0);
+                    column = positions.get(1);
+                    idx = positions.get(2);
+                }
                 case HAVE_DOT -> {
                     ArrayList<Integer> positions = null;
                     try {
@@ -137,9 +146,12 @@ public class Lexer implements ILexer{
                         e.printStackTrace();
                         currState = State.HAS_ERROR;
                     }
-
-
-                    //System.out.println("IN_NUM"); // Look for more numbers or more dots to become a float
+                }
+                case IN_STRING -> {
+                    ArrayList<Integer> positions = inString(idx, row, column, currentToken);
+                    row = positions.get(0);
+                    column = positions.get(1);
+                    idx = positions.get(2);
                 }
                 case HAVE_EQ -> {
                     ArrayList<Integer> positions = haveEqualState(idx, row, column, currentToken);
@@ -176,6 +188,69 @@ public class Lexer implements ILexer{
         }
         //Sentinel value representing end of file
         tokens.add(new Token(IToken.Kind.EOF, "sentinel", 0, 0, 0, 0));
+    }
+
+    // WITH b, t, n, f, r, ", ', \
+    private ArrayList<Integer> inBSlash(int index, int row, int column, StringBuilder currentToken) {
+        char currentChar = code.charAt(index);
+        switch(currentChar) {
+            case 'b' -> {
+                //insert here
+            }
+            case 't' -> {
+                //insert here
+            }
+            case 'n' -> {
+                //insert here
+            }
+            case 'f' -> {
+                //insert here
+            }
+            case 'r' -> {
+                //insert here
+            }
+            case '"' -> {
+                //insert here
+            }
+            case '\'' -> {
+                //insert here
+            }
+            case '\\' -> {
+                //insert here
+            }
+        }
+        return new ArrayList<>(Arrays.asList(row, column, index));
+    }
+
+    // '"' [  '\' ( 'b' | 't' | 'n' | 'f' | 'r' | '"' | ' ' ' | '\')  |  NOT(  '\'  |  '"'  ) ]* '"'
+    // Starts and ends with "
+    // Then a \ WITH b, t, n, f, r, ", ', \
+    // OR anything EXCEPT \ or ", in any amount
+    private ArrayList<Integer> inString(int index, int row, int column, StringBuilder currentToken) {
+        char currentChar = code.charAt(index);
+        switch(currentChar){
+            case '\\' -> {
+                currentToken.append(currentChar);
+                column++;
+                index++;
+                currState = State.IN_BSLASH;
+            }
+            case '"' -> {
+                currentToken.append(currentChar);
+                tokens.add(new Token(IToken.Kind.STRING_LIT, currentToken.toString(), index - (currentToken.length() - 1), currentToken.length(), row, column - (currentToken.length() - 1)));
+                column++;
+                index++;
+                currState = State.START;
+                currentToken.setLength(0);
+            }
+            default -> {
+                // TODO: Make a test and functionality for if the string_lit doesn't end with a quote by the end of the input
+                currentToken.append(currentChar);
+                column++;
+                index++;
+            }
+        }
+        return new ArrayList<>(Arrays.asList(row, column, index));
     }
 
     //TODO: Might add global column, row, variable to facilitate strings
@@ -398,10 +473,17 @@ public class Lexer implements ILexer{
                 currToken.append(currentChar);
                 column++;
                 index++;
+                currState = State.HAVE_DOT;
+                currToken.setLength(currToken.length());
+            }
+            default -> {
+                tokens.add(new Token(IToken.Kind.ERROR, currToken.toString(), index - (currToken.length() - 1), currToken.length(), row, column - (currToken.length())));
+                column++;
+                index++;
+                currState = State.START;
+                currToken.setLength(0);
             }
         }
-        currState = State.HAVE_DOT;
-        currToken.setLength(currToken.length());
         return new ArrayList<Integer>(Arrays.asList(row, column, index));
     }
 
@@ -416,7 +498,9 @@ public class Lexer implements ILexer{
                     currState = State.IN_FLOAT;
                 }
                 default -> {
-                    throw new LexicalException("Not valid character after '.'", row, column);
+                    tokens.add(new Token(IToken.Kind.INT_LIT, currToken.toString(), index - (currToken.length() - 1), currToken.length(), row, column - (currToken.length())));
+                    currState = State.START;
+                    currToken.setLength(0);
                 }
                 //TODO: Add error handling for if next character is not '0'..'9' or expected end
 
@@ -471,10 +555,6 @@ public class Lexer implements ILexer{
                 currToken.append(currentChar);
                 column++;
                 index++;
-                System.out.println(Long.parseLong(currToken.toString()));
-                if(Long.parseLong(currToken.toString()) > Integer.MAX_VALUE || (Long.parseLong(currToken.toString()) < Integer.MIN_VALUE)){                currToken.append(currentChar);
-                    //throw new LexicalException("Integer is too large to be a token", row, column);
-                }
             }
             case '.' -> {
                 //if transitioning to a float
@@ -482,24 +562,40 @@ public class Lexer implements ILexer{
                 column++;
                 index++;
                 currState = State.HAVE_DOT;
-                //currToken.setLength(currToken.length() + 1);
-                //System.out.println(currToken);
             }
             case '\n' -> {
-                tokens.add(new Token(IToken.Kind.INT_LIT, currToken.toString(), index - (currToken.length() - 1), currToken.length(), row, column - (currToken.length())));
-                row++;
-                index++;
-                column = 0;
-                currState = State.START;
+                if(!(currToken.length() > 10)) {
+                    tokens.add(new Token(IToken.Kind.INT_LIT, currToken.toString(), index - (currToken.length() - 1), currToken.length(), row, column - (currToken.length())));
+                    row++;
+                    index++;
+                    column = 0;
+                    currState = State.START;
 
-                currToken.setLength(0);
+                    currToken.setLength(0);
+                }
+                else {
+                    tokens.add(new Token(IToken.Kind.ERROR, currToken.toString(), index - (currToken.length() - 1), currToken.length(), row, column - (currToken.length())));
+                    column += 3;
+                    index++;
+                    currState = State.START;
+                    currToken.setLength(0);
+                }
             }
             case '\t' -> {
-                tokens.add(new Token(IToken.Kind.INT_LIT, currToken.toString(), index - (currToken.length() - 1), currToken.length(), row, column - (currToken.length())));
-                column += 3;
-                index++;
-                currState = State.START;
-                currToken.setLength(0);
+                if(!(currToken.length() > 10)) {
+                    tokens.add(new Token(IToken.Kind.INT_LIT, currToken.toString(), index - (currToken.length() - 1), currToken.length(), row, column - (currToken.length())));
+                    column += 3;
+                    index++;
+                    currState = State.START;
+                    currToken.setLength(0);
+                }
+                else {
+                    tokens.add(new Token(IToken.Kind.ERROR, currToken.toString(), index - (currToken.length() - 1), currToken.length(), row, column - (currToken.length())));
+                    column += 3;
+                    index++;
+                    currState = State.START;
+                    currToken.setLength(0);
+                }
             }
             case 'a', 'b', 'c', 'd', 'e', 'f', 'g', 'h', 'i',
                     'j', 'k', 'l', 'm', 'n', 'o', 'p', 'q', 'r',
@@ -507,16 +603,25 @@ public class Lexer implements ILexer{
                  'A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I',
                     'J', 'K', 'L', 'M', 'N', 'O', 'P', 'Q', 'R',
                     'S', 'T', 'U', 'V', 'W', 'X', 'Y', 'Z'-> {
-                currToken.append(currentChar);
-                tokens.add(new Token(IToken.Kind.INT_LIT, currToken.toString(), index - (currToken.length() - 1), currToken.length(), row, column - (currToken.length())));
-                column++;
-                index++;
+                if(!(currToken.length() > 10)) {
+                    tokens.add(new Token(IToken.Kind.INT_LIT, currToken.toString(), index - (currToken.length() - 1), currToken.length(), row, column - (currToken.length())));
+                    currState = State.START;
+                    currToken.setLength(0);
+                }
+                else {
+                    tokens.add(new Token(IToken.Kind.ERROR, currToken.toString(), index - (currToken.length() - 1), currToken.length(), row, column - (currToken.length())));
+                    column++;
+                    index++;
+                    currState = State.START;
+                    currToken.setLength(0);
+                }
             }
             default -> {
-                tokens.add(new Token(IToken.Kind.INT_LIT, currToken.toString(), index - (currToken.length() - 1), currToken.length(), row, column - (currToken.length())));
-                currState = State.START;
-                currToken.setLength(0);
-                //throw new LexicalException("Token is invalid int", row, column);
+                if(!(currToken.length() > 10)) {
+                    tokens.add(new Token(IToken.Kind.INT_LIT, currToken.toString(), index - (currToken.length() - 1), currToken.length(), row, column - (currToken.length())));
+                    currState = State.START;
+                    currToken.setLength(0);
+                }
             }
             //TODO: Add error handling for if next character is not '0'..'9' or expected end
         }
@@ -661,6 +766,10 @@ public class Lexer implements ILexer{
                     currToken.append(currentChar);      //If there's no zero, prepare for more numbers
                     currState = State.IN_NUM;
                 }
+            }
+            case '"' -> {
+                currToken.append(currentChar);
+                currState = State.IN_STRING;
             }
         }
         index++;

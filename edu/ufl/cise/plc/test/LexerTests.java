@@ -62,7 +62,11 @@ public class LexerTests {
 		assertEquals(Kind.INT_LIT, t.getKind());
 		assertEquals(expectedValue, t.getIntValue());	
 	}
-	
+
+	void checkFloat(IToken t, float expectedValue){
+		assertEquals(Kind.FLOAT_LIT, t.getKind());
+		assertEquals(expectedValue, t.getFloatValue());
+	}
 	//check that this token  is an INT_LIT with expected int value and position
 	void checkInt(IToken t, int expectedValue, int expectedLine, int expectedColumn) {
 		checkInt(t,expectedValue);
@@ -449,7 +453,7 @@ public class LexerTests {
 	@Test
 	public void intToFloat() throws LexicalException{
 		String input = """
-				30.035
+				30.035 number
 				20.4 0.3
 				70.59
 				""";
@@ -457,6 +461,7 @@ public class LexerTests {
 		ILexer lexer = getLexer(input);
 
 		checkToken(lexer.next(), Kind.FLOAT_LIT, 0, 0);
+		checkToken(lexer.next(), Kind.IDENT, 0, 7);
 		checkToken(lexer.next(), Kind.FLOAT_LIT, 1, 0);
 		checkToken(lexer.next(), Kind.FLOAT_LIT, 1, 5);
 		checkToken(lexer.next(), Kind.FLOAT_LIT, 2, 0);
@@ -475,4 +480,94 @@ public class LexerTests {
 			lexer.next();
 		});
 	}
+
+	@Test
+	public void testComment() throws LexicalException{
+		String input = """
+				int x = 10; # Shouldn't register this
+				x++;
+					#kajsdfpoi34jf9823jh 4 98ph3 mnljknjdopqwj09812389*()U)()(*I)(&*^*&(%^%*#$^&%@%^&@#R&@%$&^%@#&^%@$&U
+				# float y = 123.
+				float y = 3.24;
+				# akljsdhflkjasdhfjkabsdfjknasdfkhjnakljsdfhnlakjsdfhnajslkdfnsldfj
+				""";
+
+		show(input);
+		ILexer lexer = getLexer(input);
+		checkIdent(lexer.peek(), "x", 0, 4);
+		checkToken(lexer.next(), Kind.TYPE, 0, 0);
+		checkToken(lexer.next(), Kind.IDENT, 0, 4);
+		checkToken(lexer.next(), Kind.ASSIGN, 0, 6);
+		checkToken(lexer.next(), Kind.INT_LIT, 0, 8);
+		checkToken(lexer.next(), Kind.SEMI, 0, 10);
+		checkToken(lexer.next(), Kind.IDENT, 1, 0);
+		checkToken(lexer.next(), Kind.PLUS, 1, 1);
+		checkToken(lexer.next(), Kind.PLUS, 1, 2);
+		checkToken(lexer.next(), Kind.SEMI, 1, 3);
+		checkToken(lexer.next(), Kind.TYPE, 4,0);
+		checkToken(lexer.next(), Kind.IDENT, 4, 6);
+		checkToken(lexer.next(), Kind.ASSIGN, 4, 8);
+		checkToken(lexer.next(), Kind.FLOAT_LIT, 4, 10);
+		checkToken(lexer.next(), Kind.SEMI, 4, 14);
+		checkEOF(lexer.next());
+
+	}
+
+	@Test
+	public void testNumberLogic() throws LexicalException{
+		String input = """
+				1.kjadshfkjadshf
+				""";
+		show(input);
+		ILexer lexer = getLexer(input);
+		assertThrows(LexicalException.class, () -> {
+			@SuppressWarnings("unused")
+			IToken token = lexer.next();
+		});
+	}
+
+	@Test
+	public void testZeroLogin() throws LexicalException{
+		String input = """
+				0aqweqwe
+				""";
+		show(input);
+		ILexer lexer = getLexer(input);
+		checkToken(lexer.next(), Kind.INT_LIT, 0, 0);
+		checkToken(lexer.next(), Kind.IDENT, 0, 1);
+		checkEOF(lexer.next());
+	}
+
+	@Test
+	public void testInvalidInt() throws LexicalException {
+		String input = """
+				012323
+				""";
+		show(input);
+		ILexer lexer = getLexer(input);
+		assertThrows(LexicalException.class, () -> {
+			@SuppressWarnings("unused")
+			IToken token = lexer.next();
+		});
+	}
+
+	@Test
+	public void testValues() throws LexicalException{
+		String input = """
+				0.035
+				0.4 0.3
+				0.59
+				12312adsfafds
+				""";
+		show(input);
+		ILexer lexer = getLexer(input);
+		checkFloat(lexer.next(), 0.035f);
+		checkFloat(lexer.next(), 0.4f);
+		checkFloat(lexer.next(), 0.3f);
+		checkFloat(lexer.next(), 0.59f);
+		checkInt(lexer.next(), 12312);
+		checkIdent(lexer.next(), "adsfafds");
+		checkEOF(lexer.next());
+	}
+
 }

@@ -48,6 +48,47 @@ public class Token implements IToken {
 
     @Override
     public String getStringValue() {
-        return null;
+        StringBuilder output = new StringBuilder();
+        for (int i = 0; i < this.input.length(); i++) {
+            if (i != 0 && i != this.input.length()-1) {
+                if (this.input.charAt(i - 1) == '\\') {
+                    switch (this.input.charAt(i)) {
+                        case 'b' -> {
+                            output.append((char) 8);
+                        }
+                        case 't' -> {
+                            output.append((char) 9);
+                        }
+                        case 'n' -> {
+                            output.append((char) 10);
+                        }
+                        case 'f' -> {
+                            output.append((char) 12);
+                        }
+                        case 'r' -> {
+                            output.append((char) 13);
+                        }
+                        case '\'' -> {
+                            output.append('\'');
+                        }
+                        case '\"' -> {
+                            output.append('\"');
+                        }
+                        case '\\' -> {
+                            output.append((char)92);
+                        }
+                        default -> {
+                            output.append(this.input.charAt(i));
+                        }
+                    }
+                }
+                else if(this.input.charAt(i) != '\\')
+                    output.append(this.input.charAt(i));
+            }
+            else if (this.input.charAt(i) != '\\' && this.input.charAt(i) != '\"') {
+                output.append(this.input.charAt(i));
+            }
+        }
+        return output.toString();
     }
 }

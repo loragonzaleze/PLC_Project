@@ -19,15 +19,15 @@ public class Lexer implements ILexer{
         HAVE_DOT,   // DONE?
         IN_FLOAT,   // DONE?
         IN_NUM,     // DONE?
-        IN_STRING,  // working on it (string_lit)
-        IN_BSLASH,  // working on it (backslash)
+        IN_STRING,  // DONE
         IN_COMMENT, // TODO: Start on comments
         HAVE_EQ, // '=' -> '==' | '=' DONE
         HAVE_MINUS, // '-' -> '->' | '-' DONE
         HAVE_LT, // '<' -> '<<' | '<=' | '<' | '<-' DONE
         HAVE_GT, // '>' -> '>>' | '>=' | '>' DONE
         HAVE_BANG, // '!' -> '!=' | '!' DONE
-        HAS_ERROR
+        HAS_ERROR,
+        IN_BSLASH_CHECK
     }
     private final Map<String, IToken.Kind> reserved = Map.ofEntries(
             entry("string", IToken.Kind.TYPE),
@@ -109,8 +109,8 @@ public class Lexer implements ILexer{
                     idx = positions.get(2);
                     //System.out.println("HAVE_ZERO"); // If has a zero, then prepare for HAVE_DOT
                 }
-                case IN_BSLASH -> {
-                    ArrayList<Integer> positions = inBSlash(idx, row, column, currentToken);
+                case IN_BSLASH_CHECK -> {
+                    ArrayList<Integer> positions = inBSlashCheck(idx, row, column, currentToken);
                     row = positions.get(0);
                     column = positions.get(1);
                     idx = positions.get(2);
@@ -190,50 +190,50 @@ public class Lexer implements ILexer{
         tokens.add(new Token(IToken.Kind.EOF, "sentinel", 0, 0, 0, 0));
     }
 
-    // WITH b, t, n, f, r, ", ', \
-    private ArrayList<Integer> inBSlash(int index, int row, int column, StringBuilder currentToken) {
+    // WITH [b], t, n, f, r, ", ', \
+    private ArrayList<Integer> inBSlashCheck(int index, int row, int column, StringBuilder currentToken) {
         char currentChar = code.charAt(index);
         switch(currentChar) {
-            case 'b' -> {
-                //insert here
+            case '\\' -> {
+                currentToken.append((char)92);
+                currentToken.append((char)92);
+                column++;
+                index++;
+                currState = State.IN_STRING;
             }
             case 't' -> {
-                //insert here
+                currentToken.append('\\');
+                currentToken.append(currentChar);
+                column += 3;
+                index++;
+                currState = State.IN_STRING;
             }
             case 'n' -> {
-                //insert here
+                currentToken.append('\\');
+                currentToken.append(currentChar);
+                column = 0;
+                row++;
+                index++;
+                currState = State.IN_STRING;
             }
-            case 'f' -> {
-                //insert here
-            }
-            case 'r' -> {
-                //insert here
-            }
-            case '"' -> {
-                //insert here
-            }
-            case '\'' -> {
-                //insert here
-            }
-            case '\\' -> {
-                //insert here
+            case 'b', 'f', 'r', '\'', '"' -> {
+                currentToken.append('\\');
+                currentToken.append(currentChar);
+                column++;
+                index++;
+                currState = State.IN_STRING;
             }
         }
         return new ArrayList<>(Arrays.asList(row, column, index));
     }
-
     // '"' [  '\' ( 'b' | 't' | 'n' | 'f' | 'r' | '"' | ' ' ' | '\')  |  NOT(  '\'  |  '"'  ) ]* '"'
-    // Starts and ends with "
-    // Then a \ WITH b, t, n, f, r, ", ', \
-    // OR anything EXCEPT \ or ", in any amount
     private ArrayList<Integer> inString(int index, int row, int column, StringBuilder currentToken) {
         char currentChar = code.charAt(index);
         switch(currentChar){
             case '\\' -> {
-                currentToken.append(currentChar);
                 column++;
                 index++;
-                currState = State.IN_BSLASH;
+                currState = State.IN_BSLASH_CHECK;
             }
             case '"' -> {
                 currentToken.append(currentChar);
@@ -244,7 +244,6 @@ public class Lexer implements ILexer{
                 currentToken.setLength(0);
             }
             default -> {
-                // TODO: Make a test and functionality for if the string_lit doesn't end with a quote by the end of the input
                 currentToken.append(currentChar);
                 column++;
                 index++;

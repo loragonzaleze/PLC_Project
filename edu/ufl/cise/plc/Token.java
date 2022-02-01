@@ -33,21 +33,32 @@ public class Token implements IToken {
 
     @Override
     public int getIntValue() {
+        if (kind != Kind.INT_LIT){
+            throw new UnsupportedOperationException();
+        }
         return Integer.parseInt(input);
     }
 
     @Override
     public float getFloatValue() {
+        if(kind != Kind.FLOAT_LIT){
+            throw new UnsupportedOperationException();
+        }
         return Float.parseFloat(input);
     }
 
     @Override
     public boolean getBooleanValue() {
-        return false;
-    }
+        if(kind != Kind.BOOLEAN_LIT){
+            throw new UnsupportedOperationException();
+        }
+        return input.equals("true"); }
 
     @Override
     public String getStringValue() {
+        if(kind != Kind.STRING_LIT){
+            throw new UnsupportedOperationException();
+        }
         StringBuilder output = new StringBuilder();
         for (int i = 0; i < this.input.length(); i++) {
             if (i != 0 && i != this.input.length()-1) {

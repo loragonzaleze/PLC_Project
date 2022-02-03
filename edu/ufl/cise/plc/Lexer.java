@@ -14,18 +14,18 @@ public class Lexer implements ILexer{
     private final int codeLength;
     private enum State {
         START,
-        IN_IDENT,   // DONE? TODO: these areas require more testing for exception states -Luna
-        HAVE_ZERO,  // DONE
-        HAVE_DOT,   // DONE?
-        IN_FLOAT,   // DONE?
-        IN_NUM,     // DONE?
-        IN_STRING,  // DONE
-        IN_COMMENT, // TODO: Start on comments
-        HAVE_EQ, // '=' -> '==' | '=' DONE
-        HAVE_MINUS, // '-' -> '->' | '-' DONE
-        HAVE_LT, // '<' -> '<<' | '<=' | '<' | '<-' DONE
-        HAVE_GT, // '>' -> '>>' | '>=' | '>' DONE
-        HAVE_BANG, // '!' -> '!=' | '!' DONE
+        IN_IDENT,
+        HAVE_ZERO,
+        HAVE_DOT,
+        IN_FLOAT,
+        IN_NUM,
+        IN_STRING,
+        IN_COMMENT,
+        HAVE_EQ,
+        HAVE_MINUS,
+        HAVE_LT,
+        HAVE_GT,
+        HAVE_BANG,
         HAS_ERROR,
         IN_BSLASH_CHECK
     }
@@ -107,7 +107,6 @@ public class Lexer implements ILexer{
                     row = positions.get(0);
                     column = positions.get(1);
                     idx = positions.get(2);
-                    //System.out.println("HAVE_ZERO"); // If has a zero, then prepare for HAVE_DOT
                 }
                 case IN_BSLASH_CHECK -> {
                     ArrayList<Integer> positions = inBSlashCheck(idx, row, column, currentToken);
@@ -126,7 +125,6 @@ public class Lexer implements ILexer{
                     row = positions.get(0);
                     column = positions.get(1);
                     idx = positions.get(2);
-                    //System.out.println("HAVE_FLOAT"); // Continue until no more numbers
                 }
                 case IN_NUM -> {
                     ArrayList<Integer> positions = inNum(idx, row, column, currentToken);
@@ -206,15 +204,7 @@ public class Lexer implements ILexer{
                 index++;
                 currState = State.IN_STRING;
             }
-            case 'n' -> {
-                currentToken.append('\\');
-                currentToken.append(currentChar);
-                column = 0;
-                row++;
-                index++;
-                currState = State.IN_STRING;
-            }
-            case 'b', 'f', 'r', '\'', '"' -> {
+            case 'b', 'f', 'r', '\'', '"', 'n' -> {
                 currentToken.append('\\');
                 currentToken.append(currentChar);
                 column++;
@@ -250,7 +240,6 @@ public class Lexer implements ILexer{
         return new ArrayList<>(Arrays.asList(row, column, index));
     }
 
-    //TODO: Might add global column, row, variable to facilitate strings
     private ArrayList<Integer> inIdentState(int index, int row, int column, StringBuilder currToken){
         char currentChar = code.charAt(index);
         if (Character.isLetter(currentChar) || currentChar == '_' || currentChar == '$' || Character.isDigit(currentChar)){
@@ -545,7 +534,6 @@ public class Lexer implements ILexer{
                     currState = State.HAS_ERROR;
                     currToken.setLength(0);
                 }
-                //TODO: Add error handling for if next character is not '0'..'9' or expected end
 
         }
         return new ArrayList<Integer>(Arrays.asList(row, column, index));
@@ -852,6 +840,9 @@ public class Lexer implements ILexer{
 
     @Override
     public IToken peek() throws LexicalException {
-        return tokens.get(tokenPosition + 1);
+        if(tokens.get(tokenPosition).getKind() == IToken.Kind.ERROR){
+            throw new LexicalException("Cannot have token " + tokens.get(tokenPosition).getText() + " here!");
+        }
+        return tokens.get(tokenPosition);
     }
 }

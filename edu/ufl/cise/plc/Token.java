@@ -45,6 +45,7 @@ public class Token implements IToken {
             throw new UnsupportedOperationException();
         }
         return Float.parseFloat(input);
+
     }
 
     @Override

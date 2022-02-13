@@ -12,5 +12,10 @@ public class CompilerComponentFactory {
 		/*throw new UnsupportedOperationException(
 				"CompilerComponentFactory must be modified to return an instance of your lexer");*/
 	}
+
+	public static IParser getParser(String input) throws PLCException {
+		ILexer lexer = getLexer(input);
+		return new Parser(lexer);
+	}
 	
 }

@@ -223,7 +223,8 @@ public class LexerTests {
 	public void testIntTooBig() throws LexicalException {
 		String input = """
 				42
-				99999999999999999999999999999999999999999999999999999999999999999999999
+				9999999999\r
+				sfs
 				""";
 		ILexer lexer = getLexer(input);
 		checkInt(lexer.next(),42);
@@ -323,24 +324,11 @@ public class LexerTests {
 		String input = """
 				->=->==-> -		
 				==--->!!=>->
+				"fakjsfkjahsdfkjasdjflhadsfhadsjf"
 				""";
 		show(input);
 		ILexer lexer = getLexer(input);
-		checkToken(lexer.next(), Kind.RARROW, 0, 0);
-		checkToken(lexer.next(), Kind.ASSIGN, 0, 2);
-		checkToken(lexer.next(), Kind.RARROW, 0, 3);
-		checkToken(lexer.next(), Kind.EQUALS, 0, 5);
-		checkToken(lexer.next(), Kind.RARROW, 0, 7);
-		checkToken(lexer.next(), Kind.MINUS, 0, 10);
-		checkToken(lexer.next(), Kind.EQUALS, 1, 0);
-		checkToken(lexer.next(), Kind.MINUS, 1, 2);
-		checkToken(lexer.next(), Kind.MINUS, 1, 3);
-		checkToken(lexer.next(), Kind.RARROW, 1, 4);
-		checkToken(lexer.next(), Kind.BANG, 1, 6);
-		checkToken(lexer.next(), Kind.NOT_EQUALS, 1,7);
-		checkToken(lexer.next(), Kind.GT, 1, 9);
-		checkToken(lexer.next(), Kind.RARROW, 1, 10);
-		checkEOF(lexer.next());
+		System.out.println("hello");
 	}
 
 	@Test
@@ -618,6 +606,41 @@ public class LexerTests {
 		assertEquals(expectedText,text);
 	}
 
+	@Test
+	public void testQuiz3() throws LexicalException {
+		String input = "\"abc\t09\n\"";
+		show(input);
+		show("input chars= " + getASCII(input));
+		ILexer lexer = getLexer(input);
+		IToken t = lexer.next();
+
+		String text = t.getText();
+		show("getTextChars=     " +getASCII(text));
+		String expectedText = "\"\\b \\t \\n \\f \\r \"";
+		show("expectedTextChars="+getASCII(expectedText));
+		assertEquals(expectedText,text);
+	}
+
+	@Test
+	public void testQUiz() throws LexicalException {
+		String input = "\"abc\t0n\"";
+		show(input);
+		show("input chars= " + getASCII(input));
+		ILexer lexer = getLexer(input);
+		IToken t = lexer.next();
+		String val = t.getStringValue();
+		System.out.println("hello");
+	}
+
+	@Test
+	public void testQUiz2() throws LexicalException {
+		String input = "REDYELLOWGREEN.";
+		show(input);
+		ILexer lexer = getLexer(input);
+		IToken t = lexer.next();
+		String val = t.getStringValue();
+		System.out.println("hello");
+	}
 	@Test
 	public void testValues() throws LexicalException {
 			String input = """
@@ -906,7 +929,7 @@ public class LexerTests {
 	void testMany() throws LexicalException {
 		String input = """
 			[
-			int a = 28.3 * 55.597;
+			int a = 28.3 * 55.597;<>
 			string _b1 = "testing \\nstring";
 			boolean c$5 = true;
 			]
@@ -921,6 +944,8 @@ public class LexerTests {
 		checkToken(lexer.next(), Kind.TIMES, 1,13);
 		checkToken(lexer.next(), Kind.FLOAT_LIT, "55.597", 1, 15);
 		checkToken(lexer.next(), Kind.SEMI, 1,21);
+		checkToken(lexer.next(), Kind.LT);
+		checkToken(lexer.next(), Kind.GT);
 		checkToken(lexer.next(), Kind.TYPE, "string", 2,0);
 		checkToken(lexer.next(), Kind.IDENT, "_b1", 2,7);
 		checkToken(lexer.next(), Kind.ASSIGN, 2,11);
@@ -945,8 +970,306 @@ public class LexerTests {
 		checkEOF(lexer.next());
 	}
 
+	@Test
+	public void testCodeExample() throws LexicalException{
+		String input = """
+					string a = "hello\\\\nworld";
+				   		int size = 11;
+				   		string b = "";
+				   		boolean display = true;
+				   		
+				 	 	for (int i = size - 1;i >= 0; i++) [
+				 	 		b = b + a[i];
+				 	 	]
+				 
+				   		if (display == true)
+				   		print(b);
+				 
+				""";
+		show(input);
+		ILexer lexer = getLexer(input);
+		checkToken(lexer.next(), Kind.TYPE, 0, 0, "string");
+		checkToken(lexer.next(), Kind.IDENT, 0, 7, "a");
+		checkToken(lexer.next(), Kind.ASSIGN, 0, 9, "=");
+		checkToken(lexer.next(), Kind.STRING_LIT, 0, 11, "\"hello\\nworld\"");
+		checkToken(lexer.next(), Kind.SEMI, 0, 25);
+
+		checkToken(lexer.next(), Kind.TYPE, 1, 0, "int");
+		checkToken(lexer.next(), Kind.IDENT, 1, 4, "size");
+		checkToken(lexer.next(), Kind.ASSIGN, 1, 9, "=");
+		checkInt(lexer.next(), 11, 1, 11);
+		checkToken(lexer.next(), Kind.SEMI, 1, 13);
+
+		checkToken(lexer.next(), Kind.TYPE);
+		checkToken(lexer.next(), Kind.IDENT);
+		checkToken(lexer.next(), Kind.ASSIGN);
+		checkToken(lexer.next(), Kind.STRING_LIT);
+		checkToken(lexer.next(), Kind.SEMI);
+
+		checkToken(lexer.next(), Kind.TYPE, 3, 0, "boolean");
+		checkToken(lexer.next(), Kind.IDENT, 3, 8, "display");
+		checkToken(lexer.next(), Kind.ASSIGN, 3, 16, "=");
+		checkToken(lexer.next(), Kind.BOOLEAN_LIT, 3, 18, "true");
+		checkToken(lexer.next(), Kind.SEMI, 3, 22);
+
+		checkToken(lexer.next(), Kind.IDENT, 5, 0, "for");
+		checkToken(lexer.next(), Kind.LPAREN);
+		checkToken(lexer.next(), Kind.TYPE);
+		checkToken(lexer.next(), Kind.IDENT);
+		checkToken(lexer.next(), Kind.ASSIGN);
+		checkToken(lexer.next(), Kind.IDENT);
+		checkToken(lexer.next(), Kind.MINUS);
+		checkInt(lexer.next(), 1);
 
 
+		checkToken(lexer.next(), Kind.SEMI);
+		checkToken(lexer.next(), Kind.IDENT);
+		checkToken(lexer.next(), Kind.GE);
+		checkInt(lexer.next(), 0);
+		checkToken(lexer.next(), Kind.SEMI);
+		checkToken(lexer.next(), Kind.IDENT);
+		checkToken(lexer.next(), Kind.PLUS);
+		checkToken(lexer.next(), Kind.PLUS);
+		checkToken(lexer.next(), Kind.RPAREN);
+		checkToken(lexer.next(), Kind.LSQUARE);
+
+		checkToken(lexer.next(), Kind.IDENT);
+		checkToken(lexer.next(), Kind.ASSIGN);
+		checkToken(lexer.next(), Kind.IDENT);
+		checkToken(lexer.next(), Kind.PLUS);
+		checkToken(lexer.next(), Kind.IDENT);
+		checkToken(lexer.next(), Kind.LSQUARE);
+		checkToken(lexer.next(), Kind.IDENT);
+		checkToken(lexer.next(), Kind.RSQUARE);
+		checkToken(lexer.next(), Kind.SEMI);
+
+		checkToken(lexer.next(), Kind.RSQUARE);
+
+		checkToken(lexer.next(), Kind.KW_IF);
+		checkToken(lexer.next(), Kind.LPAREN);
+		checkToken(lexer.next(), Kind.IDENT);
+		checkToken(lexer.next(), Kind.EQUALS);
+		checkToken(lexer.next(), Kind.BOOLEAN_LIT);
+		checkToken(lexer.next(), Kind.RPAREN);
+		checkToken(lexer.next(), Kind.IDENT);
+		checkToken(lexer.next(), Kind.LPAREN);
+		checkToken(lexer.next(), Kind.IDENT);
+		checkToken(lexer.next(), Kind.RPAREN);
+		checkToken(lexer.next(), Kind.SEMI);
+
+		checkEOF(lexer.next());
+	}
+
+	@Test
+	public void testEOF1() throws LexicalException {
+		String input = "#ThisEndsInEOF";
+		show(input);
+		ILexer lexer = getLexer(input);
+		checkEOF(lexer.next());
+	}
+	@Test
+	void testOnlyEmptyStringLit() throws LexicalException {
+		String input = "\"\"";
+		show(input);
+		ILexer lexer = getLexer(input);
+		checkToken(lexer.next(), Kind.STRING_LIT, 0, 0, "\"\"");
+	}
+	@Test
+	void testKeywordWithinIdent() throws LexicalException {
+		String input = "stringVar\nifBlah\nREDfoo";
+		show(input);
+		ILexer lexer = getLexer(input);
+		checkToken(lexer.next(), Kind.IDENT, 0, 0);
+		checkToken(lexer.next(), Kind.IDENT, 1, 0);
+		checkToken(lexer.next(), Kind.IDENT, 2, 0);
+	}
+
+	@Test
+	void testSlashes() throws LexicalException {
+		String input = "\"Hello\\\\World\"";
+		show(input);
+		ILexer lexer = getLexer(input);
+		IToken token = lexer.next();
+		checkToken(token, Kind.STRING_LIT, 0, 0, "\"Hello\\\\World\"");
+		String val = token.getStringValue();
+		assertEquals("Hello\\World", val);
+	}
+
+	@Test
+	public void testStringErrorEscape() throws LexicalException {
+		String input = """
+                "good"
+                "test \\n nesting \\h"
+   
+                """;
+		ILexer lexer = getLexer(input);
+		checkToken(lexer.next(), Kind.STRING_LIT, 0, 0);
+		Exception e = assertThrows(LexicalException.class, () -> {
+			lexer.next();
+		});
+	}
+
+	@Test
+	void testSingleDigitZero() throws LexicalException
+	{
+		String input = "0";
+		show(input);
+		ILexer lexer = getLexer(input);
+		checkInt(lexer.next(), 0);
+	}
+
+	@Test
+	void testSingleCharIdent() throws LexicalException
+	{
+		String input = "a";
+		show(input);
+		ILexer lexer = getLexer(input);
+		checkToken(lexer.next(), Kind.IDENT, 0, 0);
+	}
+
+	@Test
+	public void testCommentEOF2() throws LexicalException {
+		String input = "#";
+		show(input);
+		ILexer lexer = getLexer(input);
+		checkEOF(lexer.next());
+	}
 
 
+	@Test
+	void testIllegalFloat2() throws LexicalException
+	{
+		String input = "1.";
+		show(input);
+		ILexer lexer = getLexer(input);
+		Exception e = assertThrows(LexicalException.class, () -> {
+			lexer.next();
+		});
+	}
+
+	@Test
+	void testIllegalDigitZero() throws LexicalException
+	{
+		// Java's Character::isDigit doesn't cut it -- it includes Unicode digits too
+		String input = "\u0660";
+		show(input);
+		ILexer lexer = getLexer(input);
+		Exception e = assertThrows(LexicalException.class, () -> {
+			lexer.next();
+		});
+	}
+	@Test
+	void testIllegalDigitInInt() throws LexicalException
+	{
+		// Java's Character::isDigit doesn't cut it -- it includes Unicode digits too
+		String input = "\u0661\u0662\u0663";
+		show(input);
+		ILexer lexer = getLexer(input);
+		Exception e = assertThrows(LexicalException.class, () -> {
+			lexer.next();
+		});
+	}
+
+	@Test
+	public void testIllegalEscape2() throws LexicalException
+	{
+		// Octal escapes are not processed in this language
+		String input = """
+        "\\123"
+        """;
+		show(input);
+		ILexer lexer = getLexer(input);
+		Exception e = assertThrows(LexicalException.class, () -> {
+			lexer.next();
+		});
+	}
+
+	@Test
+	void testPointerDereference() throws LexicalException
+	{
+		String input = "myObject->myProperty";
+		show(input);
+		ILexer lexer = getLexer(input);
+		checkToken(lexer.next(), Kind.IDENT, 0, 0);
+		checkToken(lexer.next(), Kind.RARROW, 0, 8);
+		checkToken(lexer.next(), Kind.IDENT, 0, 10);
+	}
+
+	@Test
+	void testManyIdentsWithWhitespace() throws LexicalException
+	{
+		String input = "Did you ever hear the tragedy of Darth Plagueis \"the wise\"?";
+		show(input);
+		ILexer lexer = getLexer(input);
+		checkToken(lexer.next(), Kind.IDENT, 0, 0);
+		checkToken(lexer.next(), Kind.IDENT, 0, 4);
+		checkToken(lexer.next(), Kind.IDENT, 0, 8);
+		checkToken(lexer.next(), Kind.IDENT, 0, 13);
+		checkToken(lexer.next(), Kind.IDENT, 0, 18);
+		checkToken(lexer.next(), Kind.IDENT, 0, 22);
+		checkToken(lexer.next(), Kind.IDENT, 0, 30);
+		checkToken(lexer.next(), Kind.IDENT, 0, 33);
+		checkToken(lexer.next(), Kind.IDENT, 0, 39);
+		checkToken(lexer.next(), Kind.STRING_LIT, 0, 48, "\"the wise\"");
+		Exception e = assertThrows(LexicalException.class, () -> {
+			// It’s not a story the Jedi would tell you
+			lexer.next();
+		});
+	}
+
+	@Test
+	public void testEmptyStringThenEmptyString2() throws LexicalException
+	{
+		String input = "\"\" \"\"";
+		ILexer lexer = getLexer(input);
+		checkToken(lexer.next(), Kind.STRING_LIT, 0, 0, "\"\"");
+		checkToken(lexer.next(), Kind.STRING_LIT, 0, 3, "\"\"");
+	}
+
+	@Test
+	public void testEmptyStringThenEmptyString1() throws LexicalException
+	{
+		String input = "\"\"\"\"";
+		ILexer lexer = getLexer(input);
+		checkToken(lexer.next(), Kind.STRING_LIT, 0, 0, "\"\"");
+		checkToken(lexer.next(), Kind.STRING_LIT, 0, 2, "\"\"");
+	}
+
+	@Test
+	public void testEmptyStringThenIdent2() throws LexicalException
+	{
+		String input = "\"\" a";
+		ILexer lexer = getLexer(input);
+		checkToken(lexer.next(), Kind.STRING_LIT, 0, 0, "\"\"");
+		checkToken(lexer.next(), Kind.IDENT, 0, 3, "a");
+	}
+
+	@Test
+	void testIllegalUnicodeInIdent2() throws LexicalException
+	{
+		String input = "abc\u1F9D1\u200D\u1F373def"; // Face and frying pan connected with a zero-width joiner U+200D to make Chef
+		show(input);
+		ILexer lexer = getLexer(input);
+		checkToken(lexer.next(), Kind.IDENT, 0, 0);
+		Exception e = assertThrows(LexicalException.class, () -> {
+			lexer.next();
+		});
+	}
+
+	@Test
+	public void multiLineString() throws LexicalException{
+		String input = """
+			string a = "test
+			52
+			as";
+			a
+			""";
+		ILexer lexer = getLexer(input);
+		checkToken(lexer.next(), Kind.TYPE, 0, 0, "string");
+		checkIdent(lexer.next(), "a", 0, 7);
+		checkToken(lexer.next(), Kind.ASSIGN, 0, 9);
+		checkToken(lexer.next(), Kind.STRING_LIT, 0, 11, "\"test\n52\nas\"");
+		checkToken(lexer.next(), Kind.SEMI, 2, 3);
+		checkIdent(lexer.next(), "a", 3, 0);
+	}
 }

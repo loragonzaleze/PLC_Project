@@ -30,6 +30,15 @@ import edu.ufl.cise.plc.ast.UnaryExprPostfix;
 
 class Assignment2StarterTests {
 
+	private void invalidConditionalChecker(String input) throws Exception{
+		show("-------------");
+		show(input);
+		Exception e =assertThrows(SyntaxException.class,() ->{
+			getAST(input);
+		});
+		show(e);
+	}
+
 	private ASTNode getAST(String input) throws Exception {
 		IParser parser = CompilerComponentFactory.getParser(input);
 		return parser.parse();
@@ -214,7 +223,7 @@ class Assignment2StarterTests {
 	@Test
 	public void test9(TestInfo testInfo) throws Exception {
 		String input = """
-				if (a) b else c fi
+				if (a) b else a&b&y&x fi
 				""";
 		show("-------------");
 		show(input);
@@ -228,8 +237,8 @@ class Assignment2StarterTests {
 		assertThat("", var15, instanceOf(IdentExpr.class));
 		assertEquals("b", var15.getText());
 		Expr var16 = ((ConditionalExpr) ast).getFalseCase();
-		assertThat("", var16, instanceOf(IdentExpr.class));
-		assertEquals("c", var16.getText());
+		assertThat("", var16, instanceOf(BinaryExpr.class));
+		assertEquals("a", var16.getText());
 	}
 
 	@DisplayName("test10")
@@ -406,6 +415,7 @@ class Assignment2StarterTests {
 		assertEquals("x", var21.getText());
 		Expr var22 = ((ConditionalExpr) var20).getTrueCase();
 		assertThat("", var22, instanceOf(ConditionalExpr.class));
+
 		Expr var23 = ((ConditionalExpr) var20).getFalseCase();
 		assertThat("", var23, instanceOf(IdentExpr.class));
 		assertEquals("z", var23.getText());
@@ -424,6 +434,247 @@ class Assignment2StarterTests {
 		show(input);
 		Expr ast = (Expr) getAST(input);
 		show(ast);
-		System.out.println("Stop here");
 	}
+
+	@DisplayName("test18")
+	@Test
+	public void test18(TestInfo testInfo) throws Exception {
+		String input = """
+                a * b % getRed!c
+                """;
+		show("-------------");
+		show(input);
+		Expr ast = (Expr) getAST(input);
+		show(ast);
+		assertThat("", ast, instanceOf(BinaryExpr.class));
+		assertEquals(MOD, ((BinaryExpr) ast).getOp().getKind());
+		Expr var2 = ((BinaryExpr) ast).getLeft();
+		assertThat("", var2, instanceOf(BinaryExpr.class));
+		assertEquals(TIMES, ((BinaryExpr) var2).getOp().getKind());
+		Expr var3 = ((BinaryExpr) var2).getLeft();
+		assertThat("", var3, instanceOf(IdentExpr.class));
+		assertEquals("a", var3.getText());
+		Expr var4 = ((BinaryExpr) var2).getRight();
+		assertThat("", var4, instanceOf(IdentExpr.class));
+		assertEquals("b", var4.getText());
+		Expr var5 = ((BinaryExpr) ast).getRight();
+		assertThat("", var5, instanceOf(UnaryExpr.class));
+		assertEquals("getRed", var5.getText());
+	}
+
+	@DisplayName("test19")
+	@Test
+	public void test19(TestInfo testInfo) throws Exception {
+		String input = """
+                a % if (x) y else z fi
+                """;
+		show("-------------");
+		show(input);
+		Expr ast = (Expr) getAST(input);
+		show(ast);
+
+	}
+
+	@DisplayName("test20")
+	@Test
+	public void test20(TestInfo testInfo) throws Exception {
+		String input = """
+				a[ if (x) y else z fi ,y]*z
+				""";
+		show("-------------");
+		show(input);
+		Expr ast = (Expr) getAST(input);
+		show(ast);
+
+	}
+
+	@DisplayName("logical OR expression")
+	@Test
+	public void test21(TestInfo testInfo) throws Exception {
+		String input = """
+				a | b & c
+				""";
+		show("-------------");
+		show(input);
+		Expr ast = (Expr) getAST(input);
+		show(ast);
+		assertThat("", ast, instanceOf(BinaryExpr.class));
+		assertEquals(OR, ((BinaryExpr) ast).getOp().getKind());
+		Expr var2 = ((BinaryExpr) ast).getLeft();
+		assertThat("", var2, instanceOf(BinaryExpr.class));
+		assertEquals(AND, ((BinaryExpr) var2).getOp().getKind());
+		Expr var3 = ((BinaryExpr) var2).getLeft();
+		assertThat("", var3, instanceOf(IdentExpr.class));
+		assertEquals("a", var3.getText());
+		Expr var4 = ((BinaryExpr) var2).getRight();
+		assertThat("", var4, instanceOf(IdentExpr.class));
+		assertEquals("b", var4.getText());
+		Expr var5 = ((BinaryExpr) ast).getRight();
+		assertThat("", var5, instanceOf(IdentExpr.class));
+		assertEquals("c", var5.getText());
+
+	}
+
+	@DisplayName("Comparsion Expr")
+	@Test
+	public void test22(TestInfo testInfo) throws Exception {
+		String input = """
+				a < b == c
+				""";
+		show("-------------");
+		show(input);
+		Expr ast = (Expr) getAST(input);
+		show(ast);
+		assertThat("", ast, instanceOf(BinaryExpr.class));
+		assertEquals(EQUALS, ((BinaryExpr) ast).getOp().getKind());
+		Expr var2 = ((BinaryExpr) ast).getLeft();
+		assertThat("", var2, instanceOf(BinaryExpr.class));
+		assertEquals(LT, ((BinaryExpr) var2).getOp().getKind());
+		Expr var3 = ((BinaryExpr) var2).getLeft();
+		assertThat("", var3, instanceOf(IdentExpr.class));
+		assertEquals("a", var3.getText());
+		Expr var4 = ((BinaryExpr) var2).getRight();
+		assertThat("", var4, instanceOf(IdentExpr.class));
+		assertEquals("b", var4.getText());
+		Expr var5 = ((BinaryExpr) ast).getRight();
+		assertThat("", var5, instanceOf(IdentExpr.class));
+		assertEquals("c", var5.getText());
+	}
+	@DisplayName("Addition with valid if statement ")
+	@Test
+	public void test23(TestInfo testInfo) throws Exception {
+		String input = """
+				a + (if (x) y else z fi)
+				""";
+		show("-------------");
+		show(input);
+		Expr ast = (Expr) getAST(input);
+		show(ast);
+	}
+
+	@DisplayName("Statement with starting parentheses")
+	@Test
+	public void test24(TestInfo testInfo) throws Exception {
+		String input = """
+				a + (if (x) y else z fi)
+				""";
+		show("-------------");
+		show(input);
+		Expr ast = (Expr) getAST(input);
+		show(ast);
+		assertThat("", ast, instanceOf(BinaryExpr.class));
+	}
+
+	@DisplayName("Statement starting with parentheses")
+	@Test
+	public void test25(TestInfo testInfo) throws Exception {
+		String input = """
+				(a)
+				""";
+		show("-------------");
+		show(input);
+		Expr ast = (Expr) getAST(input);
+		show(ast);
+		assertThat("", ast, instanceOf(IdentExpr.class));
+	}
+
+	@DisplayName("Each statement in parentheses")
+	@Test
+	public void test26(TestInfo testInfo) throws Exception {
+		String input = """
+				(a) + (if (x) y else z fi) - (b)
+				""";
+		show("-------------");
+		show(input);
+		Expr ast = (Expr) getAST(input);
+		show(ast);
+	}
+
+	@DisplayName("Test parentheses")
+	@Test
+	public void test27(TestInfo testInfo) throws Exception {
+		String input = """
+				a + ((b + c) + d) + e
+				""";
+		show("-------------");
+		show(input);
+		Expr ast = (Expr) getAST(input);
+		show(ast);
+	}
+
+	@DisplayName("Test multiply precedence")
+	@Test
+	public void test28(TestInfo testInfo) throws Exception {
+		String input = """
+				a + h * x
+				""";
+		show("-------------");
+		show(input);
+		Expr ast = (Expr) getAST(input);
+		show(ast);
+	}
+
+
+	@DisplayName("testEOF")
+	@Test
+	public void testEOF(TestInfo testinfo) throws Exception{
+		String input = """
+        x +
+        """;
+		show("-------------");
+		show(input);
+		Exception e =assertThrows(SyntaxException.class,() ->{
+			getAST(input);
+		});
+		show(e);
+	}
+
+	@DisplayName("testInvalidConditional1")
+	@Test
+	public void testInvalidConditional1(TestInfo testInfo)throws Exception{
+
+		String input = """
+        if (
+        """;
+		invalidConditionalChecker(input);
+
+		String input2 = """
+        if (b
+        """;
+		invalidConditionalChecker(input2);
+
+		String input3 = """
+        if (b)
+        """;
+		invalidConditionalChecker(input3);
+
+		String input4 = """
+        if (b) x
+        """;
+		invalidConditionalChecker(input4);
+
+		String input5 = """
+        if (b) x else
+        """;
+		invalidConditionalChecker(input5);
+
+		String input6 = """
+        if (b) x else
+        """;
+		invalidConditionalChecker(input6);
+
+		String input7 = """
+        if (b) x else y
+        """;
+		invalidConditionalChecker(input7);
+
+		String input8 = """
+        if (b) x else y test
+        """;
+		invalidConditionalChecker(input8);
+
+
+	}
+
+
 }

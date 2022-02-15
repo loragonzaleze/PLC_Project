@@ -12,10 +12,12 @@ public class Parser implements IParser {
     private IToken current;
     private final ILexer lexer;
     private final EnumSet<IToken.Kind> logicalOrPredictSet;
+    private final EnumSet<IToken.Kind> comparisonExprOperatorSet;
     public Parser(ILexer lexer) throws PLCException {
         this.lexer = lexer;
         this.current = lexer.next();
         this.logicalOrPredictSet = EnumSet.range(IToken.Kind.IDENT, IToken.Kind.LPAREN);
+        this.comparisonExprOperatorSet = EnumSet.range(IToken.Kind.LT, IToken.Kind.GE);
     }
 
     void consume() throws LexicalException {
@@ -24,12 +26,34 @@ public class Parser implements IParser {
         current = lexer.next();
     }
 
-    boolean match(IToken.Kind token) throws PLCException {
-        if(token == lexer.peek().getKind()){
-            current = lexer.next();
+    boolean matchExprPredictSet(IToken firstToken) throws PLCException {
+        if(logicalOrPredictSet.contains(firstToken.getKind()) || firstToken.getKind() == IToken.Kind.BANG || firstToken.getKind() == IToken.Kind.MINUS //PREDICT(Expr ::= LogicalOrExpr) = {!,-,COLOR_OP,IMAGE_OP)
+                || firstToken.getKind() == IToken.Kind.COLOR_OP || firstToken.getKind() == IToken.Kind.IMAGE_OP || firstToken.getKind() == IToken.Kind.IDENT || firstToken.getKind() == IToken.Kind.KW_IF)
+        {
             return true;
         }
-        throw new PLCException("Expected another token");
+        throw new SyntaxException("Expected Boolean, String, Int, Float, Ident, !, -, COLOR_OP, IMAGE_OP, (,  if, Actual token: " + firstToken.getKind());
+    }
+
+    boolean matchPredictSet(IToken firstToken) throws PLCException{
+        if(logicalOrPredictSet.contains(firstToken.getKind()) || firstToken.getKind() == IToken.Kind.BANG || firstToken.getKind() == IToken.Kind.MINUS //PREDICT(Expr ::= LogicalOrExpr) = {!,-,COLOR_OP,IMAGE_OP)
+                || firstToken.getKind() == IToken.Kind.COLOR_OP || firstToken.getKind() == IToken.Kind.IMAGE_OP || firstToken.getKind() == IToken.Kind.IDENT)
+        {
+            return true;
+        }
+        throw new SyntaxException("Expected Boolean, String, Int, Float, Ident, !, -, COLOR_OP, IMAGE_OP, (,  token, Actual token: " + firstToken.getKind());
+    }
+    boolean match(IToken.Kind token) throws PLCException {
+        if(token == current.getKind()){
+            return true;
+        }
+        throw new SyntaxException("Expected " + token +" Actual token: " + current.getKind());
+    }
+
+    boolean matchPlusOne(IToken.Kind token) throws PLCException {
+        if(lexer.peek().getKind() == IToken.Kind.EOF)
+            return false;
+        return lexer.peek().getKind() == token;
     }
 
     //Expr::= ConditionalExpr | LogicalOrExpr
@@ -44,7 +68,7 @@ public class Parser implements IParser {
             e = logicalOrExpr();
         }
         else{
-            throw new PLCException("Threw an error lo");
+            throw new PLCException("Throwing error due to invalid token: " + firstToken.getText() + " token kind: " + firstToken.getKind());
         }
 
         return e;
@@ -57,16 +81,22 @@ public class Parser implements IParser {
         Expr condition = null; // ( Expr )
         Expr trueCase = null; // Expr
         Expr falseCase = null; // Expr
-        if(match(IToken.Kind.LPAREN)) { // if '('
-            consume();// TODO: Write exception handling
-            condition = expr();
-            consume();
-            trueCase = expr();
-            consume();
-            falseCase = expr();
-            e = new ConditionalExpr(firstToken, condition, trueCase, falseCase);
-            consume();
-        }
+        consume(); // 'if'
+        match(IToken.Kind.LPAREN); // check that if ends with'('
+        consume();
+        matchExprPredictSet(current);
+        condition = expr(); // Expr
+        match(IToken.Kind.RPAREN); // ')'
+        consume();
+        matchExprPredictSet(current);
+        trueCase = expr(); // Expr
+        match(IToken.Kind.KW_ELSE); // Check that there is an else
+        consume();
+        matchExprPredictSet(current);
+        falseCase = expr();
+        match(IToken.Kind.KW_FI);
+        e = new ConditionalExpr(firstToken, condition, trueCase, falseCase);
+        consume();
         return e;
     }
 
@@ -77,7 +107,13 @@ public class Parser implements IParser {
         Expr right = null;
 
         left = logicalAndExpr();
-        //TODO: implement right
+        while(current.getKind() == IToken.Kind.OR){
+            IToken op = current;
+            consume();
+            matchPredictSet(current);
+            right = logicalAndExpr();
+            left = new BinaryExpr(firstToken, left, op, right);
+        }
         return left;
     }
 
@@ -90,18 +126,26 @@ public class Parser implements IParser {
         while(current.getKind() == IToken.Kind.AND){
             IToken op = current;
             consume();
+            matchPredictSet(current);
             right = comparisonExpr();
             left = new BinaryExpr(firstToken, left, op, right);
         }
         return left;
     }
 
+    //ComparisonExpr ::= AdditiveExpr ( op = ('<' | '>' | '==' | '!=' | '<=' | '>=') AdditiveExpr)*
     private Expr comparisonExpr() throws PLCException {
         IToken firstToken = current;
         Expr left = null;
         Expr right = null;
         left = additiveExpr();
-        //TODO: implement right
+        while(comparisonExprOperatorSet.contains(current.getKind())){
+            IToken op = current;
+            consume();
+            matchPredictSet(current);
+            right = additiveExpr();
+            left = new BinaryExpr(firstToken, left, op, right);
+        }
         return left;
     }
 
@@ -113,6 +157,7 @@ public class Parser implements IParser {
         while(current.getKind() == IToken.Kind.MINUS || current.getKind() == IToken.Kind.PLUS){
             IToken op = current;
             consume();
+            matchPredictSet(current); //Make sure the current token is in the predict set of UnaryExpr
             right = multiplicativeExpr();
             left = new BinaryExpr(firstToken, left, op, right);
         }
@@ -128,6 +173,7 @@ public class Parser implements IParser {
                 || current.getKind() == IToken.Kind.MOD){
             IToken op = current;
             consume();
+            matchPredictSet(current);
             right = unaryExpr();
             left = new BinaryExpr(firstToken, left, op, right);
         }
@@ -144,14 +190,16 @@ public class Parser implements IParser {
                 || current.getKind() == IToken.Kind.COLOR_OP || current.getKind() == IToken.Kind.IMAGE_OP){
             IToken op = firstToken;
             consume();
+            matchPredictSet(current);
             Expr right = unaryExpr();
             e = new UnaryExpr(firstToken, op, right);
         }
         if(e == null){ // For unaryExprPostfix
             Expr left = primaryExpr();
+            PixelSelector right = null;
             consume();
-            PixelSelector right = pixelSelector();
-            if(right != null)
+            right = pixelSelector();
+            if(right != null) //If it does not contain a pixel selector
                 e = new UnaryExprPostfix(firstToken, left, right);
             else
                 e = left;
@@ -165,7 +213,7 @@ public class Parser implements IParser {
     /*
     * PrimaryExpr ::= BOOLEAN_LIT | STRING_LIT | INT_LIT | FLOAT_LIT | IDENT | '(' Expr ')'
     * */
-    private Expr primaryExpr() throws LexicalException {
+    private Expr primaryExpr() throws PLCException {
         IToken firstToken = current;
         Expr e = null;
         e = switch(firstToken.getKind()){
@@ -176,6 +224,13 @@ public class Parser implements IParser {
             case IDENT -> new IdentExpr(firstToken);
             default -> null;
         };
+        if(e == null){
+            match(IToken.Kind.LPAREN); // Has to be left parentheses, or else error
+            consume();
+            e = expr();
+            match(IToken.Kind.RPAREN);
+        }
+
         return e;
     }
 
@@ -187,6 +242,7 @@ public class Parser implements IParser {
         Expr x = expr();
         consume();
         Expr y = expr();
+        match(IToken.Kind.RSQUARE);
         consume();
         return new PixelSelector(firstToken, x, y);
     }

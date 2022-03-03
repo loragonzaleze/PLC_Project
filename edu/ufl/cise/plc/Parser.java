@@ -7,10 +7,6 @@ import java.util.EnumSet;
 import java.util.List;
 
 public class Parser implements IParser {
-
-
-
-
     private IToken current;
     private final ILexer lexer;
     private final EnumSet<IToken.Kind> logicalOrPredictSet;
@@ -30,7 +26,7 @@ public class Parser implements IParser {
 
     boolean matchExprPredictSet(IToken firstToken) throws PLCException {
         if(logicalOrPredictSet.contains(firstToken.getKind()) || firstToken.getKind() == IToken.Kind.BANG || firstToken.getKind() == IToken.Kind.MINUS //PREDICT(Expr ::= LogicalOrExpr) = {!,-,COLOR_OP,IMAGE_OP)
-                || firstToken.getKind() == IToken.Kind.COLOR_OP || firstToken.getKind() == IToken.Kind.IMAGE_OP || firstToken.getKind() == IToken.Kind.IDENT || firstToken.getKind() == IToken.Kind.KW_IF)
+                || firstToken.getKind() == IToken.Kind.COLOR_OP || firstToken.getKind() == IToken.Kind.IMAGE_OP || firstToken.getKind() == IToken.Kind.IDENT || firstToken.getKind() == IToken.Kind.KW_IF || firstToken.getKind() == IToken.Kind.LANGLE)
         {
             return true;
         }
@@ -39,7 +35,7 @@ public class Parser implements IParser {
 
     boolean matchPredictSet(IToken firstToken) throws PLCException{
         if(logicalOrPredictSet.contains(firstToken.getKind()) || firstToken.getKind() == IToken.Kind.BANG || firstToken.getKind() == IToken.Kind.MINUS //PREDICT(Expr ::= LogicalOrExpr) = {!,-,COLOR_OP,IMAGE_OP)
-                || firstToken.getKind() == IToken.Kind.COLOR_OP || firstToken.getKind() == IToken.Kind.IMAGE_OP || firstToken.getKind() == IToken.Kind.IDENT)
+                || firstToken.getKind() == IToken.Kind.COLOR_OP || firstToken.getKind() == IToken.Kind.IMAGE_OP || firstToken.getKind() == IToken.Kind.IDENT || firstToken.getKind() == IToken.Kind.COLOR_CONST)
         {
             return true;
         }
@@ -60,7 +56,13 @@ public class Parser implements IParser {
 
     private Program program() throws PLCException {
         IToken firstToken = current;
-        Types.Type returnType = Types.Type.toType(current.getText());
+        Types.Type returnType;
+        try {
+            returnType = Types.Type.toType(current.getText());
+        }
+        catch(IllegalArgumentException e){
+            throw new SyntaxException("Expected Token of type void or TYPE");
+        }
 
         consume();
         match(IToken.Kind.IDENT);
@@ -399,7 +401,6 @@ public class Parser implements IParser {
                 consume();
                 Expr blue = expr();
                 match(IToken.Kind.RANGLE);
-                consume();
                 e = new ColorExpr(firstToken, red, green, blue);
 
             }

@@ -1272,4 +1272,30 @@ public class LexerTests {
 		checkToken(lexer.next(), Kind.SEMI, 2, 3);
 		checkIdent(lexer.next(), "a", 3, 0);
 	}
+
+
+	@Test
+	public void quiz2() throws LexicalException{
+		String input = """
+   			"hi\nbye\n"
+			""";
+		ILexer lexer = getLexer(input);
+		IToken test = lexer.next();
+		System.out.println("Prints this: ");
+		String testStr = test.getText();
+		String stringVal = test.getStringValue();
+		System.out.println("Hello");
+	}
+
+	@Test
+	public void quiz2Part1() throws LexicalException{
+		String input = """
+   			
+			""";
+		ILexer lexer = getLexer(input);
+		IToken test = lexer.next();
+		System.out.println("Prints this: ");
+		System.out.println("Hello");
+	}
+
 }

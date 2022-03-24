@@ -26,7 +26,8 @@ public class Parser implements IParser {
 
     boolean matchExprPredictSet(IToken firstToken) throws PLCException {
         if(logicalOrPredictSet.contains(firstToken.getKind()) || firstToken.getKind() == IToken.Kind.BANG || firstToken.getKind() == IToken.Kind.MINUS //PREDICT(Expr ::= LogicalOrExpr) = {!,-,COLOR_OP,IMAGE_OP)
-                || firstToken.getKind() == IToken.Kind.COLOR_OP || firstToken.getKind() == IToken.Kind.IMAGE_OP || firstToken.getKind() == IToken.Kind.IDENT || firstToken.getKind() == IToken.Kind.KW_IF || firstToken.getKind() == IToken.Kind.LANGLE)
+                || firstToken.getKind() == IToken.Kind.COLOR_OP || firstToken.getKind() == IToken.Kind.IMAGE_OP || firstToken.getKind() == IToken.Kind.IDENT
+                || firstToken.getKind() == IToken.Kind.KW_IF || firstToken.getKind() == IToken.Kind.LANGLE)
         {
             return true;
         }

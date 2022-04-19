@@ -33,21 +33,74 @@ public class Token implements IToken {
 
     @Override
     public int getIntValue() {
-        return 0;
+        if (kind != Kind.INT_LIT){
+            throw new UnsupportedOperationException();
+        }
+        return Integer.parseInt(input);
     }
 
     @Override
     public float getFloatValue() {
-        return 0;
+        if(kind != Kind.FLOAT_LIT){
+            throw new UnsupportedOperationException();
+        }
+        return Float.parseFloat(input);
+
     }
 
     @Override
     public boolean getBooleanValue() {
-        return false;
-    }
+        if(kind != Kind.BOOLEAN_LIT){
+            throw new UnsupportedOperationException();
+        }
+        return input.equals("true"); }
 
     @Override
     public String getStringValue() {
-        return null;
+        if(kind != Kind.STRING_LIT){
+            throw new UnsupportedOperationException();
+        }
+        StringBuilder output = new StringBuilder();
+        for (int i = 0; i < this.input.length(); i++) {
+            if (i != 0 && i != this.input.length()-1) {
+                if (this.input.charAt(i - 1) == '\\') {
+                    switch (this.input.charAt(i)) {
+                        case 'b' -> {
+                            output.append((char) 8);
+                        }
+                        case 't' -> {
+                            output.append((char) 9);
+                        }
+                        case 'n' -> {
+                            output.append((char) 10);
+                        }
+                        case 'f' -> {
+                            output.append((char) 12);
+                        }
+                        case 'r' -> {
+                            output.append((char) 13);
+                        }
+                        case '\'' -> {
+                            output.append('\'');
+                        }
+                        case '\"' -> {
+                            output.append('\"');
+                        }
+                        case '\\' -> {
+                            output.append((char)92);
+                        }
+                        default -> {
+                            output.append(this.input.charAt(i));
+                        }
+                    }
+                }
+                else if(this.input.charAt(i) != '\\')
+                    output.append(this.input.charAt(i));
+            }
+            else if (this.input.charAt(i) != '\\' && this.input.charAt(i) != '\"') {
+                output.append(this.input.charAt(i));
+            }
+        }
+        return output.toString();
     }
 }

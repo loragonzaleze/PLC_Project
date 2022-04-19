@@ -3,14 +3,9 @@ package edu.ufl.cise.plc;
 public class Main {
     public static void main(String[] args){
 
-        String input = """
-				+\t= 
-				- 	 
-				""";
-        String sample = "Hello World!";
-        System.out.println(sample);
-        sample = sample + 'i';
-        System.out.println(sample);
+        float value = Float.parseFloat("1.19872398471248971204123047910932471231234124314323242");
+        int intVal = Integer.parseInt("9999999999");
+        System.out.print(intVal );
 
     }
 }

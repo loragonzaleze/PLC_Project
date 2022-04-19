@@ -41,7 +41,7 @@ public class TypeCheckVisitor implements ASTVisitor {
 	Program root;
 	
 	record Pair<T0,T1>(T0 t0, T1 t1){};  //may be useful for constructing lookup tables.
-	
+
 	private void check(boolean condition, ASTNode node, String message) throws TypeCheckException {
 		if (!condition) {
 			throw new TypeCheckException(message, node.getSourceLoc());
@@ -89,8 +89,11 @@ public class TypeCheckVisitor implements ASTVisitor {
 	
 	//Visits the child expressions to get their type (and ensure they are correctly typed)
 	//then checks the given conditions.
+	//TODO check that color Expr variables that do not exist get added
 	@Override
 	public Object visitColorExpr(ColorExpr colorExpr, Object arg) throws Exception {
+
+
 		Type redType = (Type) colorExpr.getRed().visit(this, arg);
 		Type greenType = (Type) colorExpr.getGreen().visit(this, arg);
 		Type blueType = (Type) colorExpr.getBlue().visit(this, arg);
@@ -189,8 +192,14 @@ public class TypeCheckVisitor implements ASTVisitor {
 				}
 				else if(leftType == COLOR && rightType == COLOR) resultType = COLOR;
 				else if(leftType == COLORFLOAT && rightType == COLORFLOAT) resultType = COLORFLOAT;
-				else if(leftType == COLORFLOAT && rightType == COLOR) resultType = COLORFLOAT;
-				else if(leftType == COLOR && rightType == COLORFLOAT) resultType = COLORFLOAT;
+				else if(leftType == COLORFLOAT && rightType == COLOR) {
+					binaryExpr.getRight().setCoerceTo(COLORFLOAT);
+					resultType = COLORFLOAT;
+				}
+				else if(leftType == COLOR && rightType == COLORFLOAT) {
+					binaryExpr.getLeft().setType(COLORFLOAT);
+					resultType = COLORFLOAT;
+				}
 				else if(leftType == IMAGE && rightType == IMAGE) resultType = IMAGE;
 
 				else if(leftType == IMAGE && rightType == INT) resultType = IMAGE;
@@ -201,7 +210,7 @@ public class TypeCheckVisitor implements ASTVisitor {
 				}
 				else if(leftType == COLOR && rightType == INT) {
 					binaryExpr.getRight().setCoerceTo(COLOR);
-					resultType = IMAGE;
+					resultType = COLOR;
 				}
 				else if(leftType == FLOAT && rightType == COLOR) {
 					binaryExpr.getLeft().setCoerceTo(COLORFLOAT);
@@ -286,49 +295,78 @@ public class TypeCheckVisitor implements ASTVisitor {
 		String name = assignmentStatement.getName();
 		Type targetType = (Type) symbolTable.lookup(name).getType();
 		Expr initializer = assignmentStatement.getExpr();
+		PixelSelector ps = assignmentStatement.getSelector();
+		if(ps != null){
+			Expr x = ps.getX();
+			Expr y = ps.getY();
+			check(x instanceof  IdentExpr && y instanceof IdentExpr, assignmentStatement, "X and Y must be of type IdentExpr");
+			Declaration xDef = new NameDef(x.getFirstToken(), "int", x.getText());
+			Declaration yDef = new NameDef(y.getFirstToken(), "int", y.getText());
+			check(symbolTable.lookup(x.getText()) == null && symbolTable.lookup(y.getText()) == null, ps, "PixelSelector variable names already in use: " + x.getText() + ", " + y.getText());
+			check(x instanceof IdentExpr && y instanceof IdentExpr, ps, "X and Y must of type IdentExpr");
+
+			check(symbolTable.lookup(x.getText()) == null && symbolTable.lookup(y.getText()) == null, assignmentStatement, "Local variable name already exists!");
+			symbolTable.insert(x.getText(), xDef);
+			symbolTable.insert(y.getText(), yDef);
+			symbolTable.lookup(x.getText()).setInitialized(true);
+			symbolTable.lookup(y.getText()).setInitialized(true);
+			ps.visit(this, arg);
+			Type initializerType = (Type) initializer.visit(this, arg);
+
+			symbolTable.entries.remove(x.getText());
+			symbolTable.entries.remove(y.getText()); //After done with text
+			Declaration declaration = assignmentStatement.getTargetDec();
+			symbolTable.lookup(name).setInitialized(true);
+			if(initializerType == COLOR || initializerType == COLORFLOAT || initializerType == FLOAT || initializerType == INT)
+				initializer.setCoerceTo(COLOR);
+			else
+				check(false, assignmentStatement, "Cannot have IMAGE PixelSelctor and " + initializerType);
+
+			return null;
+		}
 		Type initializerType = (Type) initializer.visit(this, arg);
 		Declaration declaration = assignmentStatement.getTargetDec();
 		//declaration.setInitialized(true);
 		symbolTable.lookup(name).setInitialized(true);
 
 		if(targetType != IMAGE){
-			PixelSelector ps = assignmentStatement.getSelector();
-			check(ps == null, assignmentStatement, "Cannot have pixel selector");
+			PixelSelector assignmentPS = assignmentStatement.getSelector();
+			check(assignmentPS == null, assignmentStatement, "Cannot have pixel selector");
 			check(checkVarCompatibility(targetType, initializerType), assignmentStatement, "Type: " + targetType + " cannot be equal to type: " + initializerType);
 			if(targetType != initializerType){
 				initializer.setCoerceTo(targetType);
 			}
 		}
 		else {
-			PixelSelector ps = assignmentStatement.getSelector();
-
+			//PixelSelector ps = assignmentStatement.getSelector();
 
 			if(ps == null){
 				if(initializerType == INT) initializer.setCoerceTo(COLOR);
 				else if(initializerType == FLOAT) initializer.setCoerceTo(COLORFLOAT);
-				else if(initializerType != COLOR || initializerType != COLORFLOAT) check(false, assignmentStatement, "Cannot have IMAGE and " + initializerType);
+				else if(initializerType != COLOR && initializerType != COLORFLOAT && initializerType != IMAGE) check(false, assignmentStatement, "Cannot have IMAGE and " + initializerType);
 			}
 			else{
-				Expr x = ps.getX();
-				Expr y = ps.getY();
-				check(x instanceof  IdentExpr && y instanceof IdentExpr, assignmentStatement, "X and Y must be of type IdentExpr");
-				Declaration xDef = new NameDef(x.getFirstToken(), "int", x.getText());
-				Declaration yDef = new NameDef(y.getFirstToken(), "int", y.getText());
-				check(symbolTable.lookup(x.getText()) == null && symbolTable.lookup(y.getText()) == null, ps, "PixelSelector variable names already in use: " + x.getText() + ", " + y.getText());
-				check(x instanceof IdentExpr && y instanceof IdentExpr, ps, "X and Y must of type IdentExpr");
 
-				check(symbolTable.lookup(x.getText()) == null && symbolTable.lookup(y.getText()) == null, assignmentStatement, "Local variable name already exists!");
-				symbolTable.insert(x.getText(), xDef);
-				symbolTable.insert(y.getText(), yDef);
-				symbolTable.lookup(x.getText()).setInitialized(true);
-				symbolTable.lookup(y.getText()).setInitialized(true);
-				ps.visit(this, arg);
-				symbolTable.entries.remove(x.getText());
-				symbolTable.entries.remove(y.getText()); //After done with text
- 				if(initializerType == COLOR || initializerType == COLORFLOAT || initializerType == FLOAT || initializerType == INT)
-					initializer.setCoerceTo(COLOR);
-				else
-					check(false, assignmentStatement, "Cannot have IMAGE PixelSelctor and " + initializerType);
+//				Expr x = ps.getX();
+//				Expr y = ps.getY();
+//				check(x instanceof  IdentExpr && y instanceof IdentExpr, assignmentStatement, "X and Y must be of type IdentExpr");
+//				Declaration xDef = new NameDef(x.getFirstToken(), "int", x.getText());
+//				Declaration yDef = new NameDef(y.getFirstToken(), "int", y.getText());
+//				check(symbolTable.lookup(x.getText()) == null && symbolTable.lookup(y.getText()) == null, ps, "PixelSelector variable names already in use: " + x.getText() + ", " + y.getText());
+//				check(x instanceof IdentExpr && y instanceof IdentExpr, ps, "X and Y must of type IdentExpr");
+//
+//				check(symbolTable.lookup(x.getText()) == null && symbolTable.lookup(y.getText()) == null, assignmentStatement, "Local variable name already exists!");
+//				symbolTable.insert(x.getText(), xDef);
+//				symbolTable.insert(y.getText(), yDef);
+//				symbolTable.lookup(x.getText()).setInitialized(true);
+//				symbolTable.lookup(y.getText()).setInitialized(true);
+//				ps.visit(this, arg);
+//				symbolTable.entries.remove(x.getText());
+//				symbolTable.entries.remove(y.getText()); //After done with text
+// 				if(initializerType == COLOR || initializerType == COLORFLOAT || initializerType == FLOAT || initializerType == INT)
+//					initializer.setCoerceTo(COLOR);
+//				else
+//					check(false, assignmentStatement, "Cannot have IMAGE PixelSelctor and " + initializerType);
 			}
 
 		}
@@ -349,15 +387,15 @@ public class TypeCheckVisitor implements ASTVisitor {
 	public Object visitReadStatement(ReadStatement readStatement, Object arg) throws Exception {
 		Type rhsType = (Type) readStatement.getSource().visit(this, arg);
 		String name = readStatement.getName();
-
-		Type targetType = (Type) symbolTable.lookup(name).visit(this, arg);
-
+		Type targetType = (Type) symbolTable.lookup(name).getType();
 		check(rhsType == CONSOLE || rhsType == STRING, readStatement, "Must have CONSOLE or STRING");
 		check(readStatement.getSelector() == null, readStatement, "Cannot have Pixel Selector");
+		if(rhsType != STRING)
+			readStatement.getSource().setCoerceTo(targetType);
+
 		symbolTable.lookup(name).setInitialized(true);
 		return null;
 	}
-
 
 
 	private boolean checkVarCompatibility(Type targetType, Type rhsType){
@@ -381,7 +419,6 @@ public class TypeCheckVisitor implements ASTVisitor {
 			else{
 				Type initializerType = (Type) declaration.getExpr().visit(this, arg);
 				check(initializerType == IMAGE || declaration.getDim() != null, declaration, "Must have IMAGE or dimension!");
-
 				nameDefDec.setInitialized(true);
 				declaration.setInitialized(true);
 			}
@@ -401,6 +438,9 @@ public class TypeCheckVisitor implements ASTVisitor {
 			}
 			else if(op == Kind.LARROW){
 				check(initializerType == CONSOLE | initializerType == STRING, declaration, "Must have CONSOLE or STRING");
+				if(initializerType != STRING)
+					initializer.setCoerceTo(nameDefType);
+
 				nameDefDec.setInitialized(true);
 				declaration.setInitialized(true);
 			}

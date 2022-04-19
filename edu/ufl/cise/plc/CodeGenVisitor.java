@@ -163,7 +163,10 @@ public class CodeGenVisitor implements ASTVisitor {
 
     @Override
     public Object visitDimension(Dimension dimension, Object arg) throws Exception {
-        throw new UnsupportedOperationException();
+        dimension.getWidth().visit(this, arg);
+        code.comma().space();
+        dimension.getHeight().visit(this, arg);
+        return null;
     }
 
     @Override
@@ -230,7 +233,12 @@ public class CodeGenVisitor implements ASTVisitor {
 
     @Override
     public Object visitNameDefWithDim(NameDefWithDim nameDefWithDim, Object arg) throws Exception {
-        throw new UnsupportedOperationException();
+        //double check with edwin's branch
+        if(!vars.containsKey(nameDefWithDim.getName())){
+            vars.put(nameDefWithDim.getName(), nameDefWithDim.getType());
+        }
+        code.append(typeStr.get(nameDefWithDim.getType()) + " " + nameDefWithDim.getName());
+        return null;
     }
 
     @Override
@@ -256,6 +264,5 @@ public class CodeGenVisitor implements ASTVisitor {
     public Object visitUnaryExprPostfix(UnaryExprPostfix unaryExprPostfix, Object arg) throws Exception {
         throw new UnsupportedOperationException();
     }
-
 
 }

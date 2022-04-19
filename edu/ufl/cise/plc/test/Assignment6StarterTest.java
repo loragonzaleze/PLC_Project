@@ -179,6 +179,7 @@ class Assignment6StarterTest {
 		// run PLCLang program
 		Object[] params = { size };
 		show(check(input, params, refImage));
+		show(exec(input,params));
 	    //If you don't want to compare with ref image use show(exec(input,params));
 	}
 	
@@ -213,7 +214,7 @@ class Assignment6StarterTest {
                 ^b;
 
 				""";
-		String url = "https://www.ufl.edu/media/wwwufledu/images/nav/academics.jpg";
+		String url = "https://ufl.discovery.academicanalytics.com/assets/ufl/external/academics.jpg";
 		BufferedImage inputImage = FileURLIO.readImage(url);
 		int w = inputImage.getWidth();
 		int h = inputImage.getHeight();

@@ -4,6 +4,7 @@ import java.awt.Graphics2D;
 import java.awt.geom.AffineTransform;
 import java.awt.image.AffineTransformOp;
 import java.awt.image.BufferedImage;
+import java.util.Arrays;
 
 /**
  * An image is represented by a 2D array of pixels. An image is implemented 
@@ -76,6 +77,11 @@ public class ImageOps {
 	public static void setColor(BufferedImage image, int x, int y, ColorTuple colorTuple) {
 		image.setRGB(x, y, colorTuple.pack());
 	}
+
+	public static void setColor(BufferedImage image, int x, int y, ColorTupleFloat colorTuple) {
+		image.setRGB(x, y, colorTuple.pack());
+	}
+
 	
 	/**
 	 * Returns a new image containing only the red component of the given image.  
@@ -304,7 +310,12 @@ public class ImageOps {
 //		BufferedImage image = new BufferedImage(width, height,BufferedImage.TYPE_INT_RGB);
 //		return setAllPixels(image,colorComponentVal);
 //	}
-//	
+//
+	public static boolean equals(BufferedImage image0, BufferedImage image1) {
+		int[] pixels0 = image0.getRGB(0,0,image0.getWidth(), image0.getHeight(), null,0,image0.getWidth());
+		int[] pixels1 = image1.getRGB(0,0,image1.getWidth(), image1.getHeight(), null,0,image1.getWidth());
+		return Arrays.equals(pixels0, pixels1);
+	}
 
 	/**
 	 * Returns a new image that is copy of the given BufferedImage 

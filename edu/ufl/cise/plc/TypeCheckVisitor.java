@@ -294,8 +294,10 @@ public class TypeCheckVisitor implements ASTVisitor {
 	public Object visitAssignmentStatement(AssignmentStatement assignmentStatement, Object arg) throws Exception {
 		String name = assignmentStatement.getName();
 		Type targetType = (Type) symbolTable.lookup(name).getType();
+
 		Expr initializer = assignmentStatement.getExpr();
 		PixelSelector ps = assignmentStatement.getSelector();
+		assignmentStatement.setTargetDec(symbolTable.lookup(name));
 		if(ps != null){
 			Expr x = ps.getX();
 			Expr y = ps.getY();
@@ -315,7 +317,9 @@ public class TypeCheckVisitor implements ASTVisitor {
 
 			symbolTable.entries.remove(x.getText());
 			symbolTable.entries.remove(y.getText()); //After done with text
+
 			Declaration declaration = assignmentStatement.getTargetDec();
+
 			symbolTable.lookup(name).setInitialized(true);
 			if(initializerType == COLOR || initializerType == COLORFLOAT || initializerType == FLOAT || initializerType == INT)
 				initializer.setCoerceTo(COLOR);
@@ -338,35 +342,11 @@ public class TypeCheckVisitor implements ASTVisitor {
 			}
 		}
 		else {
-			//PixelSelector ps = assignmentStatement.getSelector();
 
 			if(ps == null){
 				if(initializerType == INT) initializer.setCoerceTo(COLOR);
 				else if(initializerType == FLOAT) initializer.setCoerceTo(COLORFLOAT);
 				else if(initializerType != COLOR && initializerType != COLORFLOAT && initializerType != IMAGE) check(false, assignmentStatement, "Cannot have IMAGE and " + initializerType);
-			}
-			else{
-
-//				Expr x = ps.getX();
-//				Expr y = ps.getY();
-//				check(x instanceof  IdentExpr && y instanceof IdentExpr, assignmentStatement, "X and Y must be of type IdentExpr");
-//				Declaration xDef = new NameDef(x.getFirstToken(), "int", x.getText());
-//				Declaration yDef = new NameDef(y.getFirstToken(), "int", y.getText());
-//				check(symbolTable.lookup(x.getText()) == null && symbolTable.lookup(y.getText()) == null, ps, "PixelSelector variable names already in use: " + x.getText() + ", " + y.getText());
-//				check(x instanceof IdentExpr && y instanceof IdentExpr, ps, "X and Y must of type IdentExpr");
-//
-//				check(symbolTable.lookup(x.getText()) == null && symbolTable.lookup(y.getText()) == null, assignmentStatement, "Local variable name already exists!");
-//				symbolTable.insert(x.getText(), xDef);
-//				symbolTable.insert(y.getText(), yDef);
-//				symbolTable.lookup(x.getText()).setInitialized(true);
-//				symbolTable.lookup(y.getText()).setInitialized(true);
-//				ps.visit(this, arg);
-//				symbolTable.entries.remove(x.getText());
-//				symbolTable.entries.remove(y.getText()); //After done with text
-// 				if(initializerType == COLOR || initializerType == COLORFLOAT || initializerType == FLOAT || initializerType == INT)
-//					initializer.setCoerceTo(COLOR);
-//				else
-//					check(false, assignmentStatement, "Cannot have IMAGE PixelSelctor and " + initializerType);
 			}
 
 		}
@@ -392,7 +372,7 @@ public class TypeCheckVisitor implements ASTVisitor {
 		check(readStatement.getSelector() == null, readStatement, "Cannot have Pixel Selector");
 		if(rhsType != STRING)
 			readStatement.getSource().setCoerceTo(targetType);
-
+		readStatement.setTargetDec(symbolTable.lookup(name));
 		symbolTable.lookup(name).setInitialized(true);
 		return null;
 	}
@@ -417,10 +397,28 @@ public class TypeCheckVisitor implements ASTVisitor {
 					check(false, declaration, "Image must be initialized or have a dimension");
 			}
 			else{
-				Type initializerType = (Type) declaration.getExpr().visit(this, arg);
-				check(initializerType == IMAGE || declaration.getDim() != null, declaration, "Must have IMAGE or dimension!");
-				nameDefDec.setInitialized(true);
-				declaration.setInitialized(true);
+				//TODO: account for assignment values and read values.
+
+				Kind op = declaration.getOp().getKind();
+
+				if(op == Kind.LARROW){
+					Type initializerType = (Type) declaration.getExpr().visit(this, arg);
+					check(initializerType == CONSOLE || initializerType == STRING, declaration, "Must have CONSOLE or STRING on RHS of IMAGE read statement!");
+					nameDefDec.setInitialized(true);
+					declaration.setInitialized(true);
+					return null;
+				}
+				else if(op == Kind.ASSIGN){
+					Type initializerType = (Type) declaration.getExpr().visit(this, arg);
+					check(initializerType == IMAGE || declaration.getDim() != null, declaration, "Must have IMAGE or dimension!");
+					nameDefDec.setInitialized(true);
+					declaration.setInitialized(true);
+
+					if(initializerType == INT) initializer.setCoerceTo(COLOR);
+					else if(initializerType == FLOAT) initializer.setCoerceTo(COLORFLOAT);
+					else if(initializerType != COLOR && initializerType != COLORFLOAT && initializerType != IMAGE) check(false, declaration, "Cannot have IMAGE and " + initializerType);
+				}
+
 			}
 
 		}
@@ -428,7 +426,6 @@ public class TypeCheckVisitor implements ASTVisitor {
 			Type initializerType = (Type) declaration.getExpr().visit(this, arg);
 			Kind op = declaration.getOp().getKind();
 			if(op == Kind.ASSIGN){
-
 				check(checkVarCompatibility(nameDefType, initializerType), declaration, "Cannot have target type: " + nameDefType + " and source type: " + initializerType);
 				nameDefDec.setInitialized(true);
 				declaration.setInitialized(true);

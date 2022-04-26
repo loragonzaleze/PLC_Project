@@ -77,4 +77,19 @@ public class CodeGenStringBuilder {
         delegate.append('\"');
         return this;
     }
+
+    public CodeGenStringBuilder newKW(){
+        delegate.append("new");
+        return this;
+    }
+
+    public CodeGenStringBuilder colorTuple(){
+        delegate.append("ColorTuple");
+        return this;
+    }
+
+    public CodeGenStringBuilder colorTupleFloat(){
+        delegate.append("ColorTupleFloat");
+        return this;
+    }
 }
